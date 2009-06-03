@@ -1,0 +1,100 @@
+<project name="lgICDGEMLoaderExtension" default="all" basedir=".">
+	<description>
+		Buildfile for LexEVS ICD GEM Loader Extension
+	</description>
+
+	<property name="admin.dir" location="admin" />
+	<property name="src.dir" location="src" />
+	<property name="antBuild.dir" location="antBuild" />
+	<property name="classes.dir" location="${antBuild.dir}/classes" />
+	<property name="dist.dir" location="${basedir}/dist" />
+	<property name="test.dir" location="${basedir}/test" />
+	<property name="lbRuntime.dir" location="runtime" />
+	<property name="lgServicesIndex.dir" location="lib" />	
+
+	<!--Sets up the classpaths correctly, not meant to be called directly-->
+	<target name="init">
+		<echo>Constructing classpath</echo>
+		<path id="classpath">
+			<fileset dir="${lbRuntime.dir}" id="lbRuntime">
+				<include name="**/*.jar" />
+			</fileset>
+			<fileset dir="${lgServicesIndex.dir}" id="lgServicesIndex">
+				<include name="**/*.jar" />
+			</fileset>			
+		</path>
+
+	</target>
+
+	<target name="compile" depends="init" description="compile the source ">
+		<mkdir dir="${classes.dir}" />
+
+		<!--copy todir="${classes.dir}/">
+			<fileset dir="${src.dir}" />
+		</copy-->
+		<!-- Compile the java code from ${src.dir} into ${classes.dir} -->
+		<javac target="1.5" source="1.5" debug="true" srcdir="${src.dir}" destdir="${classes.dir}">
+			<classpath refid="classpath" />
+		</javac>
+
+		<copy todir="${classes.dir}" file="extension.xml" />
+		<copy todir="${classes.dir}" file="${src.dir}/icdGemLoader.properties" />
+	</target>
+
+	<target name="jar" depends="compile" description="generate the jar file">
+		<!-- Create the distribution directory -->
+		<mkdir dir="${dist.dir}" />
+		<!-- Put everything in ${classes} into .jar file -->
+		<jar jarfile="${dist.dir}/lgICDGEMLoaderEx.jar" basedir="${classes.dir}" duplicate="preserve">
+			<manifest>
+				<attribute name="Build-Date" value="${DSTAMP} ${TSTAMP}" />
+			</manifest>
+		</jar>
+
+		<delete dir="${antBuild.dir}" />
+	</target>
+
+	<target name="jar-source" depends="init" description="generate the jar with source">
+		<jar destfile="${dist.dir}/lgICDGEMLoaderEx-src.jar" basedir="${src.dir}"/>
+	</target>
+
+	<target name="clean" depends="init" description="clean up">
+		<!-- Clean up after the build so we just have the installer. -->
+		<delete dir="${classes.dir}" />
+		<delete>
+			<fileset dir="${dist.dir}">
+				<include name="lgICDGEMLoaderEx.jar" />
+				<include name="lgICDGEMLoaderEx-src.jar" />
+			</fileset>
+		</delete>
+	</target>
+
+	<target name="cleanAll" depends="init" description="clean up">
+		<!-- Delete the ${build.dir} and ${dist.dir} directory trees -->
+		<delete dir="${antBuild.dir}" />
+		<delete>
+			<fileset dir="${dist.dir}">
+				<include name="**/*.jar" />
+				<include name="**/*.zip" />
+			</fileset>
+
+		</delete>
+	</target>
+
+	<target name="all" depends="cleanAll, init, compile, jar, jar-source" description="do everything for an external build">
+		<ant antfile="${test.dir}/build.xml" target="all" inheritall="false"/>
+		
+		<zip destfile="${dist.dir}/deployICDGEM.zip">
+			<zipfileset dir="${basedir}/admin" includes="LoadICDGEM.bat" prefix="admin"/>
+			<zipfileset dir="${basedir}/admin" includes="LoadICDGEM.sh" prefix="admin"/>		
+			<zipfileset dir="${dist.dir}" includes="lgICDGEMLoaderEx.jar" prefix="runtime"/>
+			<zipfileset dir="${dist.dir}" includes="lgICDGEMLoaderEx-src.jar" prefix="source"/>
+			<zipfileset dir="${dist.dir}" includes="lgICDGEMLoaderEx-test.jar" prefix="test"/>
+			<zipfileset dir="${test.dir}/extlib" prefix="test/lgICDGEMLoaderEx-extlib"/>
+			<zipfileset dir="${basedir}/resources/testData/icdgem" prefix="test/resources/testData/icdgem"/>
+			<zipfileset dir="${test.dir}" includes="lgICDGEMLoaderEx-GenerateReport.xml" prefix="test"/>
+			<zipfileset dir="${test.dir}" includes="lgICDGEMLoaderEx-TestRunner.bat" prefix="test" filemode="777"/>
+			<zipfileset dir="${test.dir}" includes="lgICDGEMLoaderEx-TestRunner.sh" prefix="test" filemode="777"/>
+		</zip>
+	</target>
+</project>

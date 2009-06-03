@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<classpath>
+	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="src" path="test"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+	<classpathentry kind="lib" path="test/extlib/ant/ant-launcher.jar"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/lbAdmin"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/lbImpl"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/lbInterfaces"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/lgModel"/>
+	<classpathentry combineaccessrules="false" kind="src" path="/lgConverter"/>
+	<classpathentry kind="output" path="classes"/>
+</classpath>

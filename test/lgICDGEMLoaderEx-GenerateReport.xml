@@ -1,0 +1,96 @@
+<!--
+Copyright: (c) 2004-2008 Mayo Foundation for Medical Education and 
+Research (MFMER). All rights reserved. MAYO, MAYO CLINIC, and the
+triple-shield Mayo logo are trademarks and service marks of MFMER.
+
+Except as contained in the copyright notice above, or as used to identify 
+MFMER as the author of this software, the trade names, trademarks, service
+marks, or product names of the copyright holder shall not be used in
+advertising, promotion or otherwise in connection with this software without
+prior written authorization of the copyright holder.
+ 
+Licensed under the Eclipse Public License, Version 1.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at 
+
+ 		http://www.eclipse.org/legal/epl-v10.html
+-->
+<project name="lgICDGEMLoaderEx TestRun" default="lgICDGEMLoaderEx-html" basedir=".">
+	<description>
+		Verification test suite for LexBIG ICD GEM Loader.
+	</description>
+
+	<tstamp>
+		<format property="report.time" pattern="yyyy-MM-dd.HH-mm-ss"/>
+	</tstamp>
+	<property name="report.output.dir" location="${basedir}/lgICDGEMLoaderEx-reports/report.${report.time}"/>
+
+	<target name="init">
+		<path id="junit.path">
+			<fileset dir="${basedir}/lgICDGEMLoaderEx-extlib/ant">
+				<include name="ant-junit.jar"/>
+				<include name="ant-trax.jar"/>
+			</fileset>
+			<fileset dir="${basedir}/lgICDGEMLoaderEx-extlib/junit">
+				<include name="junit.jar"/>
+			</fileset>
+		</path>
+
+		<taskdef name="junit" classpathref="junit.path"
+			classname="org.apache.tools.ant.taskdefs.optional.junit.JUnitTask">
+		</taskdef>
+		<taskdef name="junitreport" classpathref="junit.path"
+			classname="org.apache.tools.ant.taskdefs.optional.junit.XMLResultAggregator">
+		</taskdef>
+
+		<path id="test.classpath">
+			<fileset dir="${basedir}/../runtime">
+				<include name="lgICDGEMLoaderEx.jar"/>
+			</fileset>
+			<fileset dir="${basedir}">
+				<include name="lgICDGEMLoaderEx-test.jar"/>
+			</fileset>
+			<fileset dir="${basedir}/../runtime">
+				<include name="lbRuntime.jar"/>
+			</fileset>
+			<fileset dir="${basedir}">
+				<include name="./lbTest.jar"/>
+			</fileset>			
+		</path>
+	</target>
+
+	<target name="clean" depends="init" description="clean up">
+		<delete dir="${basedir}/lgICDGEMLoaderEx-reports"/>
+	</target>
+
+	<!-- XML format -->
+	<target name="lgICDGEMLoaderEx-xml" description="task to run the LexBIG ICD GEM loader test suite and produce a report with extensive information for each test case in xml format">
+		<mkdir dir="${report.output.dir}"/>
+		<junit printsummary="true" haltonfailure="false">
+			<classpath refid="test.classpath"/>
+			<formatter type="brief" usefile="false"/>
+			<formatter type="xml" usefile="true"/>
+			<test todir="${report.output.dir}" outfile="lgICDGEMLoaderEx"
+				name="org.lexgrid.lexevs.loaders.icdgem.impl.test.ICDGEMAllTests"/>
+		</junit>
+		<echo message="Report (xml format) stored in ${report.output.dir}."/>
+	</target>
+
+	<!-- Html format -->
+	<target name="lgICDGEMLoaderEx-html" depends="lgICDGEMLoaderEx-xml" description="task to run the LexBIG test suite and produce a report suitable for view in a standard web browser">
+		<junitreport todir="${report.output.dir}">
+			<fileset dir="${report.output.dir}">
+				<include name="*.xml"/>
+			</fileset>
+			<report format="frames" todir="${report.output.dir}"/>
+		</junitreport>
+		<echo message="Deleting intermediate xml."/>
+		<delete>
+			<fileset dir="${report.output.dir}">
+				<include name="*.xml"/>
+			</fileset>
+		</delete>
+		<echo message="Report (html) stored in ${report.output.dir}."/>
+	</target>
+
+</project>
