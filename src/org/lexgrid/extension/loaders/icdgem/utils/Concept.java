@@ -36,11 +36,13 @@ public class Concept {
     private String name;
     private String description;
     private int depth;
+    private int type;
+    private String typeDesc;
 
     public Concept(String code, String name, String description, int depth, int type) {
         this.description = description;
         this.depth = depth;
-        setCodeAndName(code, name, type);
+        setCodeNameAndType(code, name, type);
     }
     
     private Concept() {
@@ -48,14 +50,18 @@ public class Concept {
     	name = "Top Thing";
     	description = "Points to all concepts that aren't children of any other concepts";
     	depth = -1;
+    	type = ICDGEMConstants.CON_TYPE_ROOT;
+    	typeDesc = ICDGEMConstants.CON_TYPE_ROOT_DESC;
     }
     
     public static Concept createRootConcept() {
     	return new Concept();
     }
     
-    private void setCodeAndName(String code, String name, int type) {
+    private void setCodeNameAndType(String code, String name, int type) {
     	if(type == ICDGEMConstants.CON_TYPE_10_CM) {
+    		this.type = ICDGEMConstants.CON_TYPE_10_CM;
+    		this.typeDesc = ICDGEMConstants.CON_TYPE_10_CM_DESC;
     		if(code.length() == 3) {
                 this.code = code;
                 this.name = name;    		    			
@@ -68,23 +74,31 @@ public class Concept {
     			this.name = sb.toString();
     		}
     	} else if (type == ICDGEMConstants.CON_TYPE_10_PCS) {
+    		this.type = ICDGEMConstants.CON_TYPE_10_PCS;
+    		this.typeDesc = ICDGEMConstants.CON_TYPE_10_PCS_DESC;    		
             this.code = code;
             this.name = name;    		
     	} else if (type == ICDGEMConstants.CON_TYPE_9_CM) {
 			StringBuffer sb = new StringBuffer(code.length() + 1);    		
             sb.append(code.substring(0, 3));
             sb.append('.');
-            sb.append(code.substring(3));
+            sb.append(code.substring(3));    		
+    		this.type = ICDGEMConstants.CON_TYPE_9_CM;
+    		this.typeDesc = ICDGEMConstants.CON_TYPE_9_CM_DESC;    		
             this.code = sb.toString();
             this.name = sb.toString();    		
     	} else if (type == ICDGEMConstants.CON_TYPE_9_PCS) {
 			StringBuffer sb = new StringBuffer(code.length() + 1);    		
             sb.append(code.substring(0, 2));
             sb.append('.');
-            sb.append(code.substring(2));
+            sb.append(code.substring(2));    		
+    		this.type = ICDGEMConstants.CON_TYPE_9_PCS;
+    		this.typeDesc = ICDGEMConstants.CON_TYPE_9_PCS_DESC;    		
             this.code = sb.toString();
             this.name = sb.toString();    		
     	} else {
+    		this.type = -99;
+    		this.typeDesc = "???";    		    		
             this.code = code;
             this.name = name;    		
     		IllegalArgumentException e = new IllegalArgumentException("Invalid type: " + type);
@@ -94,12 +108,13 @@ public class Concept {
     
     public Concept(String line, String token, int type) {
         depth = 0;
+        this.type = type;
 
         StringTokenizer tokenizer = new StringTokenizer(line, token);
         if (tokenizer.hasMoreElements()) {
         	String tempCode = tokenizer.nextToken();
         	String tempName = tempCode;
-        	setCodeAndName(tempCode, tempName, type);
+        	setCodeNameAndType(tempCode, tempName, type);
         }
         if (tokenizer.hasMoreElements()) {
             description = tokenizer.nextToken();
@@ -122,12 +137,19 @@ public class Concept {
     public int getDepth() {
     	return depth;
     }
-
+    
+    public int getType() {
+    	return type;
+    }
+    
     public String toString() {
     	final String NEW_LINE = System.getProperty("line.separator"); 
     	StringBuffer sb = new StringBuffer();
     	sb.append("Code: ");
     	sb.append(code);
+    	sb.append(NEW_LINE);
+    	sb.append("Type: ");
+    	sb.append(typeDesc);    	
     	sb.append(NEW_LINE);
     	sb.append("Name: ");
     	sb.append(name);

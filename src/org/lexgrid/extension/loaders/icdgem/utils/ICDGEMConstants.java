@@ -31,6 +31,13 @@ public class ICDGEMConstants {
 	public static final int CON_TYPE_10_PCS = 1;
 	public static final int CON_TYPE_9_CM   = 2;
 	public static final int CON_TYPE_9_PCS  = 3;
+	public static final int CON_TYPE_ROOT   = 99;
+	
+	public static final String CON_TYPE_10_CM_DESC  = "i10cm";
+	public static final String CON_TYPE_10_PCS_DESC = "i10pcs";
+	public static final String CON_TYPE_9_CM_DESC   = "i9cm";
+	public static final String CON_TYPE_9_PCS_DESC  = "i9pcs";
+	public static final String CON_TYPE_ROOT_DESC   = "root";	
 	
 	public static final int ICD9_TO_10_CM  = 0;
 	public static final int ICD9_TO_10_PCS = 1;
