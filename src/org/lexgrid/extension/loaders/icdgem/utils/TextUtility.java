@@ -34,19 +34,18 @@ import org.LexGrid.messaging.LgMessageDirectorIF;
  *          21:55:43 +0000 (Wed, 16 May 2007) $
  */
 public class TextUtility {
-    public static Concept getParent(Concept[] concepts, int curPos) {
-        int depth = concepts[curPos].getDepth();
-        for (int i = curPos; i >= 0; i--) {
-            if (concepts[i].getDepth() < depth) {
-                return concepts[i];
-            }
-        }
-        return null;
-    }
 
     public static CodingScheme readAndVerifyConcepts(String fileLocation, LgMessageDirectorIF messages, String token, ICDGEMProperties props) throws Exception {
         CodingScheme codingScheme = new CodingScheme();
         messages.info("TextUtility: readAndVerifyConcepts: Reading file into memory");
+        
+        ArrayList<Association> hasSubTypeAsso = new ArrayList<Association>();
+        ArrayList<Association> mapsToAsso = new ArrayList<Association>();
+        ArrayList<Association> containsAsso = new ArrayList<Association>();
+        
+        ArrayList<BaseConcept> complexConceptParts = new ArrayList<BaseConcept>();
+        ArrayList<BaseConcept> complextConcept = new ArrayList<BaseConc>
+        
         try {
             ArrayList<Concept> concepts = new ArrayList<Concept>();
             ArrayList<Association> associations = new ArrayList<Association>();

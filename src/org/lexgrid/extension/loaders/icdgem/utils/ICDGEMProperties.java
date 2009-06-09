@@ -39,18 +39,33 @@ public class ICDGEMProperties {
     private String _loaderVersion;    
     private String _loaderDescription;
     private String _loaderTextDescription;
+    private String _icd9CmLocalName;
+    private String _icd9CmUri;
+    private String _icd10CmLocalName;
+    private String _icd10CmUri;
+    private String _icd10PcsLocalName;
+    private String _icd10PcsUri;
     
-    // icdgem values
-    private String _icdGemOid;
-    private String _icdGemDescription;
-    private String _icdGemLocalName;
-    private String _icdGemSource;
-    private String _icdGemCopyright;
+    // gem values
+    private String _csUri;
+    private String _csDescription;
+    private String _csLocalName;
+    private String _csSource;
+    private String _csCopyright;
+    private String _englishName;
+    private String _englishUri;
+    private String _textualPresentationName;
+    private String _textualPresentationUri;
+    private String _textPlainName;
+    private String _textPlainUri;
     private int    _icdGemType;
+    private int    _srcConType;
+    private int    _tgtConType;
     
     private LgMessageDirectorIF _md = null;
     private String _codingSchemeVersion = null;
-    private Properties _props;
+    private Properties _loaderProps;
+    private Properties _gemProps;
     
     public ICDGEMProperties(String icdGemType, String icdGemVersion, LgMessageDirectorIF md) {
     	if (md == null) {
@@ -71,13 +86,24 @@ public class ICDGEMProperties {
     		_md.error("ICDGEMProperties: <constructor>: icdGemType cannot be null.  Valid values are 'i10to9cm', 'i9to10cm', 'i10to9pcs', 'i9to10pcs'.");
     	} else {
         	if(icdGemType.equalsIgnoreCase(ICDGEMConstants.ICD10_TO_9_CM_DESC)) {
-        		_icdGemType = ICDGEMConstants.ICD10_TO_9_CM; 
+        		_icdGemType = ICDGEMConstants.ICD10_TO_9_CM;
+    			_srcConType = ICDGEMConstants.CON_TYPE_10_CM;
+    			_tgtConType = ICDGEMConstants.CON_TYPE_9_CM;
+        		
         	} else if(icdGemType.equalsIgnoreCase(ICDGEMConstants.ICD10_TO_9_PCS_DESC)) {
         		_icdGemType = ICDGEMConstants.ICD10_TO_9_PCS;
-        	} else if(icdGemType.equalsIgnoreCase(ICDGEMConstants.ICD9_TO_10_CM_DESC)) {
-        		_icdGemType = ICDGEMConstants.ICD10_TO_9_CM;
+    			_srcConType = ICDGEMConstants.CON_TYPE_10_PCS;
+    			_tgtConType = ICDGEMConstants.CON_TYPE_9_PCS;			
+        		
+        	} else if(icdGemType.equalsIgnoreCase(ICDGEMConstants.ICD9_TO_10_CM_DESC)) {        		
+        		_icdGemType = ICDGEMConstants.ICD9_TO_10_CM;
+    			_srcConType = ICDGEMConstants.CON_TYPE_9_CM;
+    			_tgtConType = ICDGEMConstants.CON_TYPE_10_CM;			
+        		
         	} else if(icdGemType.equalsIgnoreCase(ICDGEMConstants.ICD9_TO_10_PCS_DESC)) {
-        		_icdGemType = ICDGEMConstants.ICD10_TO_9_PCS;
+    			_srcConType = ICDGEMConstants.CON_TYPE_9_PCS;
+    			_tgtConType = ICDGEMConstants.CON_TYPE_10_PCS;			        		
+        		_icdGemType = ICDGEMConstants.ICD9_TO_10_PCS;
         	} else {
         		_md.error("ICDGEMProperties: <constructor>: unrecoginized icdGemType: '" + icdGemType + "' Valid values are 'cm' or 'pcs'.");	
         	}
@@ -93,56 +119,70 @@ public class ICDGEMProperties {
         return _loaderVersion;    	
     }
     
-    public String getProperty(String propertyName) {
-        return _props.getProperty(propertyName);    	
-    }    
-
-    /*
-     * readProperties()
-     * read values from loaderEx.properties
-     * 
-     */    
     private void readProperties() {
     	
-    	_props = new java.util.Properties();
+    	_gemProps = new java.util.Properties();
+    	_loaderProps = new java.util.Properties();
     	ICDGEMProperties util = new ICDGEMProperties();
         try {
-			_props.load(util.getClass().getClassLoader().getResourceAsStream(ICDGEMConstants.PROP_FILE_NAME));
+        	_loaderProps.load(util.getClass().getClassLoader().getResourceAsStream("icdGemLoader.properties"));
+        	if(this._icdGemType == ICDGEMConstants.ICD10_TO_9_CM) {
+        		_gemProps.load(util.getClass().getClassLoader().getResourceAsStream("icd10to9cm.properties"));
+        	} else if (this._icdGemType == ICDGEMConstants.ICD10_TO_9_PCS) {
+        		_gemProps.load(util.getClass().getClassLoader().getResourceAsStream("icd10to9pcs.properties"));
+        	} else if (this._icdGemType == ICDGEMConstants.ICD9_TO_10_CM) {
+        		_gemProps.load(util.getClass().getClassLoader().getResourceAsStream("icd9to10cm.properties"));
+        	} else if (this._icdGemType == ICDGEMConstants.ICD9_TO_10_PCS) {
+        		_gemProps.load(util.getClass().getClassLoader().getResourceAsStream("icd9to10pcs.properties"));
+        	} else {
+    			_md.error("ICDGEMProperties: readProperties: unrecoginized icdGemType: '" + _icdGemType + "'.");			
+    		}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		_loaderName = _props.getProperty(ICDGEMConstants.PROP_LOADER_NAME);
-		_loaderVersion = _props.getProperty(ICDGEMConstants.PROP_LOADER_VERSION);
-		_loaderDescription = _props.getProperty(ICDGEMConstants.PROP_LOADER_DESCR);
-		_loaderTextDescription = _props.getProperty(ICDGEMConstants.PROP_LOADER_TEXT_INPUT_DESCR);
 		
-		if(this._icdGemType == ICDGEMConstants.ICD10_TO_9_CM) {
-			_icdGemOid = _props.getProperty(ICDGEMConstants.PROP_ICD10_TO_9_CM_OID);
-			_icdGemDescription = _props.getProperty(ICDGEMConstants.PROP_ICD10_TO_9_CM_DESCR);
-			_icdGemLocalName = _props.getProperty(ICDGEMConstants.PROP_ICD10_TO_9_CM_LOCAL_NAME);
-			_icdGemSource = _props.getProperty(ICDGEMConstants.PROP_ICD10_TO_9_CM_SOURCE);
-			_icdGemCopyright = _props.getProperty(ICDGEMConstants.PROP_ICD10_TO_9_CM_COPYRIGHT);			
-		} else if (this._icdGemType == ICDGEMConstants.ICD10_TO_9_PCS) {
-			_icdGemOid = _props.getProperty(ICDGEMConstants.PROP_ICD10_TO_9_PCS_OID);
-			_icdGemDescription = _props.getProperty(ICDGEMConstants.PROP_ICD10_TO_9_PCS_DESCR);
-			_icdGemLocalName = _props.getProperty(ICDGEMConstants.PROP_ICD10_TO_9_PCS_LOCAL_NAME);
-			_icdGemSource = _props.getProperty(ICDGEMConstants.PROP_ICD10_TO_9_PCS_SOURCE);
-			_icdGemCopyright = _props.getProperty(ICDGEMConstants.PROP_ICD10_TO_9_PCS_COPYRIGHT);			
-		} else if (this._icdGemType == ICDGEMConstants.ICD9_TO_10_CM) {
-			_icdGemOid = _props.getProperty(ICDGEMConstants.PROP_ICD9_TO_10_CM_OID);
-			_icdGemDescription = _props.getProperty(ICDGEMConstants.PROP_ICD9_TO_10_CM_DESCR);
-			_icdGemLocalName = _props.getProperty(ICDGEMConstants.PROP_ICD9_TO_10_CM_LOCAL_NAME);
-			_icdGemSource = _props.getProperty(ICDGEMConstants.PROP_ICD9_TO_10_CM_SOURCE);
-			_icdGemCopyright = _props.getProperty(ICDGEMConstants.PROP_ICD9_TO_10_CM_COPYRIGHT);			
-		} else if (this._icdGemType == ICDGEMConstants.ICD9_TO_10_PCS) {
-			_icdGemOid = _props.getProperty(ICDGEMConstants.PROP_ICD9_TO_10_PCS_OID);
-			_icdGemDescription = _props.getProperty(ICDGEMConstants.PROP_ICD9_TO_10_PCS_DESCR);
-			_icdGemLocalName = _props.getProperty(ICDGEMConstants.PROP_ICD9_TO_10_PCS_LOCAL_NAME);
-			_icdGemSource = _props.getProperty(ICDGEMConstants.PROP_ICD9_TO_10_PCS_SOURCE);
-			_icdGemCopyright = _props.getProperty(ICDGEMConstants.PROP_ICD9_TO_10_PCS_COPYRIGHT);			
-		} else {
-			_md.error("ICDGEMProperties: readProperties: unrecoginized icdGemType: '" + _icdGemType + "'.");			
-		}
+		// loader properties
+		_loaderName = _loaderProps.getProperty("icdgem.loader.name");
+		_loaderVersion = _loaderProps.getProperty("icdgem.loader.version");
+		_loaderDescription = _loaderProps.getProperty("icdgem.loader.descr");
+		_loaderTextDescription = _loaderProps.getProperty("icdgem.loader.text.input.descr");
+		_icd9CmLocalName = _loaderProps.getProperty("icd9.cm.local.name"); 
+		_icd9CmUri = _loaderProps.getProperty("icd9.cm.uri");		
+		_icd10CmLocalName = _loaderProps.getProperty("icd10.cm.local.name"); 
+		_icd10CmUri = _loaderProps.getProperty("icd10.cm.uri");
+		_icd10PcsLocalName = _loaderProps.getProperty("icd10.pcs.local.name"); 
+		_icd10PcsUri = _loaderProps.getProperty("icd10.pcs.uri");
+		
+		// GEM properties
+		_csUri = _gemProps.getProperty("uri");
+		_csDescription = _gemProps.getProperty("descr");
+		_csLocalName = _gemProps.getProperty("localname");
+		_csSource = _gemProps.getProperty("source");
+		_csCopyright = _gemProps.getProperty("copyright");					
+    }
+    
+    public String getTextualPresentationName() {
+    	return _textualPresentationName;
+    }
+    
+    public String getTextualPresentationUri() {
+    	return _textualPresentationUri;
+    }
+    
+    public String getTextPlainName() {
+    	return _textPlainName;
+    }
+    
+    public String getTextPlainUri() {
+    	return _textPlainUri;
+    }
+    
+    public String getEnglishName() {
+    	return _englishName;
+    }
+    
+    public String getEnglishUri() {
+    	return _englishUri;
     }
     
     public int getIcdGemType() {
@@ -162,26 +202,26 @@ public class ICDGEMProperties {
     	return _codingSchemeVersion;
     }
     
-    public String getIcdGemCopyright() {
-        return _icdGemCopyright;
+    public String getCsCopyright() {
+        return _csCopyright;
     }        
     
-    public String getIcdGemSource() {
-        return _icdGemSource;
+    public String getCsSource() {
+        return _csSource;
     }    
     
     
-    public String getIcdGemLocalName() {
-        return _icdGemLocalName;
+    public String getCsLocalName() {
+        return _csLocalName;
     }    
     
     
-    public String getIcdGemDescription() {
-        return _icdGemDescription;
+    public String getCsDescription() {
+        return _csDescription;
     }    
     
-    public String getIcdGemOid() {
-        return _icdGemOid;
+    public String getCsUri() {
+        return _csUri;
     }
     
     public String getLoaderTextDescrption() {
@@ -194,5 +234,42 @@ public class ICDGEMProperties {
     
     public String getLoaderName() {
         return _loaderName;
-    }            
+    }        
+    
+    public String getIcd9CmLocalName() {
+    	return this._icd9CmLocalName;
+    }
+    
+    public String getIcd9CmUri() {
+    	return this._icd9CmUri;
+    }
+        
+    public String getIcd10CmLocalName() {
+    	return this._icd10CmLocalName;
+    }
+    
+    public String getIcd10CmUri() {
+    	return this._icd10CmUri;
+    }
+        
+    public String getIcd10PcsLocalName() {
+    	return this._icd10PcsLocalName;
+    }
+    
+    public String getIcd10PcsUri() {
+    	return this._icd10PcsUri;
+    }
+    
+    public int getSrcConType() {
+    	return _srcConType;
+    }
+    
+    public int getTgtConType() {
+    	return _tgtConType;
+    }
+    
+    public LgMessageDirectorIF getMessageDirector() {
+    	return _md;
+    }
+    
 }
