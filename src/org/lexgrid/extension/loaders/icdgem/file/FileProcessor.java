@@ -63,25 +63,16 @@ public class FileProcessor {
                 		String prevSrcCon = prevGfe.getSourceCode();
                 		if(curSrcCon.equalsIgnoreCase(prevSrcCon) == true) { // still within a 'set'
                 			subSet.add(prevGfe);
+                			prevGfe = gfe;
                 		} else { // we've entered a new set of codes
                 			subSet.add(prevGfe);
                 			processSubSet(cs, root, subSet, props);
-
-                			
-                			
-                			
-                			
                 			// when done, clear subset
                 			subSet.clear();
                 			prevGfe = gfe;
                 		}
                 	}
-                	
     			}
-            	
-            	
-            	
-                line = fileReader.readLine();
             }
 			
 		} catch (FileNotFoundException e) {
@@ -115,7 +106,8 @@ public class FileProcessor {
 		if(subSet.size() == 1) {
 			processSimpleEntry(cs, root, subSet, props);
 		} else {
-			
+			ArrayList<GemScenario> scenarios = getScenarios(subSet);
+			processScenarios(cs, root, scenarios, props);
 		}
 		BaseConcept top = null;
 		GemFileEntry gfe = null;
@@ -131,8 +123,63 @@ public class FileProcessor {
 		
 	}
 	
+	private static void processScenarios(CodingScheme cs, RootConcept root, ArrayList<GemScenario> scenarios, ICDGEMProperties props) {
+		GemScenario scenario = null;
+		for(int i=0; i<scenarios.size(); ++i) {
+			scenario = scenarios.get(i);
+			processSingleScenario(cs, root, scenario, props);
+		}
+	}
+
+	/* a single scenario example:
+	 * 80608 S12400A 10111
+	 * 80608 S12401A 10111
+	 * 80608 S14125A 10112
+	 * 
+	 * should produce: 
+	 *                        (80608)
+	 *                        /     \ 
+	 *             (mapsTo)  /       \ 
+	 *                      /         \
+	 *   (S12400A AND S14125A)        (S12401A AND S14125A)
+	 *           /  \                         /  \
+	 *          /    \(contains)             /    \
+	 *         /      \                     /      \
+	 *  (S12400A)    (S14125A)        (S12401A)    (S14125A)
+	 *                  
+	 */          
+	private static void processSingleScenario(CodingScheme cs, RootConcept root, GemScenario scenario, ICDGEMProperties props) {
+		
+	}
+	
+	private static ArrayList<GemScenario> getScenarios(ArrayList<GemFileEntry> subSet) {
+		ArrayList<GemScenario> scenarios = new ArrayList<GemScenario>();
+		GemFileEntry gfe = null;
+		GemScenario gs = null;
+		boolean done = false;
+		int i = 0;
+		int curScenario = -1;
+		int prevScenario = -1;
+		while(!done) {
+			gfe = subSet.get(i);
+			curScenario = gfe.getScenario();
+			if(prevScenario != curScenario) {
+				gs = new GemScenario();
+				scenarios.add(gs);
+			}
+			prevScenario = curScenario;
+			gs.addMember(gfe);
+			
+			++i;
+			if(i == subSet.size()) {
+				done = true;
+			}
+		}
+		return scenarios;
+	}
+	
 	private static void processSimpleEntry(CodingScheme cs, RootConcept root, ArrayList<GemFileEntry> subSet, ICDGEMProperties props) {
-		GemFileEntry gfe = subSet.get(0);
+		GemFileEntry gfe = subSet.get(0); // a simple entry should always be a list of length 1;
 		// create a hasSubType association
 		// Association(String relationName, String sourceCodingScheme, String sourceCode, String targetCodingScheme, String targetCode)
 		Association hasSubType = new Association(ICDGEMConstants.ASSOCIATION_HAS_SUBTYPE, root.getSourceCodingScheme(), root.getCode(), 
