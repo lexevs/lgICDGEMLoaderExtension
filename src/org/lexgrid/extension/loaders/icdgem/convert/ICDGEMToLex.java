@@ -32,8 +32,9 @@ import org.LexGrid.util.sql.lgTables.SQLTableConstants;
 import org.LexGrid.util.sql.lgTables.SQLTableUtilities;
 
 import org.lexgrid.extension.loaders.icdgem.utils.Association;
+import org.lexgrid.extension.loaders.icdgem.utils.BaseConcept;
 import org.lexgrid.extension.loaders.icdgem.utils.CodingScheme;
-import org.lexgrid.extension.loaders.icdgem.utils.Concept;
+import org.lexgrid.extension.loaders.icdgem.utils.ICDConceptFactory;
 import org.lexgrid.extension.loaders.icdgem.utils.ICDGEMProperties;
 import org.lexgrid.extension.loaders.icdgem.utils.TextUtility;
 
@@ -50,7 +51,7 @@ public class ICDGEMToLex {
     private Connection sqlConnection_;
     private SQLTableUtilities tableUtility_;
     private SQLTableConstants tableConstants_;
-    private Concept specialConcept = Concept.createRootConcept();
+    private BaseConcept specialConcept = null;
     private CodingScheme codingScheme_;
 
     /**
@@ -407,7 +408,7 @@ public class ICDGEMToLex {
 
         messages_.info("ICD10ToLex: loadConcepts: Loading coded entry and concept property");
 
-        Concept[] concepts = codingScheme.concepts;
+        BaseConcept[] concepts = codingScheme.concepts;
 
         for (int i = 0; i < concepts.length; i++) {
             try {
