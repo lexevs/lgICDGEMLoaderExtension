@@ -64,6 +64,7 @@ public class GemTree {
 	private void getCombination(GemComboEntry gce, GemTreeNode node) {
 		GemTreeNode parent = node.getParent();
 		if(parent == null) {
+			gce.addPart(node.getValue());
 			return;
 		}
 		gce.addPart(node.getValue());
