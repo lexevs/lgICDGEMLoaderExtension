@@ -5,6 +5,7 @@ import java.io.FileNotFoundException;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.StringTokenizer;
 
 import org.LexGrid.messaging.LgMessageDirectorIF;
@@ -103,9 +104,11 @@ public class FileProcessor {
 	 * The above is an example of a complex code mapping entry.
 	 */
 	private static void processSubSet(CodingScheme cs, RootConcept root, ArrayList<GemFileEntry> subSet, ICDGEMProperties props) {
+		
 		if(subSet.size() == 1) {
 			processSimpleEntry(cs, root, subSet, props);
 		} else {
+			Collections.sort(subSet);
 			ArrayList<GemScenario> scenarios = getScenarios(subSet);
 			processScenarios(cs, root, scenarios, props);
 		}
@@ -146,10 +149,140 @@ public class FileProcessor {
 	 *          /    \(contains)             /    \
 	 *         /      \                     /      \
 	 *  (S12400A)    (S14125A)        (S12401A)    (S14125A)
-	 *                  
+	 *        
+	 *  Another example:  Note the choice list is out of order.                
+	 *                  057L4DZ 0040  10112
+     *                  057L4DZ 0045  10114
+     *                  057L4DZ 0062  10111
+     *                  057L4DZ 0065  10113
+     *
+     *  And Another (even the scenario numbering can be out of order):
+     *  
+     *  304   0B110F4 10133
+     *  304   0B110Z4 10133
+     *  304   0B113F4 10133
+     *  304   0B113Z4 10133
+     *  304   0B114F4 10133
+     *  304   0B114Z4 10133
+     *  304   0CTS0ZZ 10111
+     *  304   0CTS0ZZ 10121
+     *  304   0CTS0ZZ 10131
+     *  304   0CTS4ZZ 10111
+     *  304   0CTS4ZZ 10121
+     *  304   0CTS4ZZ 10131
+     *  304   0CTS7ZZ 10111
+     *  304   0CTS7ZZ 10121
+     *  304   0CTS7ZZ 10131
+     *  304   0CTS8ZZ 10111
+     *  304   0CTS8ZZ 10121
+     *  304   0CTS8ZZ 10131
+     *  304   0GTG0ZZ 10123
+     *  304   0GTG4ZZ 10123
+     *  304   0GTH0ZZ 10123
+     *  304   0GTH4ZZ 10123
+     *  304   0GTK0ZZ 10123
+     *  304   0GTK4ZZ 10123
+     *  304   0WB60ZZ 10112
+     *  304   0WB60ZZ 10122
+     *  304   0WB60ZZ 10132
+     *  304   0WB63ZZ 10112
+     *  304   0WB63ZZ 10122
+     *  304   0WB63ZZ 10132
+     *  304   0WB64ZZ 10112
+     *  304   0WB64ZZ 10122
+     *  304   0WB64ZZ 10132
+     *  304   0WB6XZZ 10112
+     *  304   0WB6XZZ 10122
+     *  304   0WB6XZZ 10132
 	 */          
 	private static void processSingleScenario(CodingScheme cs, RootConcept root, GemScenario scenario, ICDGEMProperties props) {
+		ArrayList<GemChoiceList> choiceLists = getChoiceLists(scenario);
 		
+		// if choice lists is only 1 element don't process using tree, 
+		// just AND all the internal elements togeather
+		if(choiceLists.size() == 1) {
+			processSingleChoiceList(cs, root, choiceLists.get(0), props); 
+		} else {
+			// split the choice lists into 'top' an 'other' nodes
+			GemChoiceList top = null;
+			ArrayList<GemChoiceList> others = new ArrayList<GemChoiceList>();
+			for(int i=0; i<choiceLists.size(); ++i) {
+				if(i == 0) {
+					top = choiceLists.get(i);
+				} else {
+					others.add(choiceLists.get(i));
+				}
+			}
+			processMultipuleChoiceLists(cs, root, top, others, props);
+		}
+	}
+	
+	private static void processMultipuleChoiceLists(CodingScheme cs, RootConcept root, GemChoiceList top, ArrayList<GemChoiceList> others, ICDGEMProperties props) {
+		BaseConcept bc = null;
+		GemTree gt = null;
+		GemTreeNode gtn = null;
+		GemFileEntry gfe = null;		
+	}
+	
+	private static void processSingleChoiceList(CodingScheme cs, RootConcept root, GemChoiceList cl, ICDGEMProperties props) {
+		StringBuffer complexCode = new StringBuffer();
+		GemFileEntry gfe = null;
+		for(int i=0; i<cl.getSize(); ++i) {
+			gfe = cl.getMember(i);
+			if(i == 0) {
+				complexCode.append(gfe.getTargetCode());
+			} else {
+				complexCode.append(" AND ");
+				complexCode.append(gfe.getTargetCode());
+			}
+		}
+		
+		// get a reference to the source concept we are mapping
+		BaseConcept src = cl.getMember(0).getSourceConcept();
+		
+		// create concept
+		ComplexConcept comCon = new ComplexConcept(complexCode.toString(), props); 
+		cs.addConcpet(comCon);
+		
+		// create has SubType association
+		Association hasSubType = new Association(ICDGEMConstants.ASSOCIATION_HAS_SUBTYPE, root.getSourceCodingScheme(), root.getCode(), 
+				src.getSourceCodingScheme(), src.getCode());
+		cs.addHasSubTypeAssociation(hasSubType); 
+		
+		// create mapsTo association
+		Association mapsTo = new Association(ICDGEMConstants.ASSOCIATION_MAPS_TO, src.getSourceCodingScheme(), src.getCode(), 
+				comCon.getSourceCodingScheme(), comCon.getCode());
+		cs.addMapsToAssociation(mapsTo);
+		
+		// create contains associations
+		Association contains = null;
+		BaseConcept tgt = null;
+		for(int i=0; i<cl.getSize(); ++i) {
+			gfe = cl.getMember(i);
+			tgt = gfe.getTargetConcept();
+			contains = new Association(ICDGEMConstants.ASSOCIATION_CONTAINS, comCon.getSourceCodingScheme(), comCon.getCode(),
+					tgt.getSourceCodingScheme(), tgt.getCode());
+			cs.addContainsAssociation(contains);
+		}
+	}
+	
+	private static ArrayList<GemChoiceList> getChoiceLists(GemScenario scenario) {
+		ArrayList<GemChoiceList> choiceLists = new ArrayList<GemChoiceList>();
+		GemChoiceList gcl = null;
+		GemFileEntry gfe = null;
+		int curCL = -1;
+		int prevCL = -1;		
+		for(int i = 0; i<scenario.getSize(); ++i) {
+			gfe = scenario.getMember(i);
+			curCL = gfe.getChoiceList();
+			if(curCL != prevCL) {
+				gcl = new GemChoiceList();
+				choiceLists.add(gcl);
+			}
+			gcl.addMember(gfe);
+			prevCL = curCL;
+		}
+		return choiceLists;
 	}
 	
 	private static ArrayList<GemScenario> getScenarios(ArrayList<GemFileEntry> subSet) {

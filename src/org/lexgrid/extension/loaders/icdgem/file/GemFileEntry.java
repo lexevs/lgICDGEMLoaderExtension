@@ -1,12 +1,11 @@
 package org.lexgrid.extension.loaders.icdgem.file;
 
-import org.LexGrid.messaging.LgMessageDirectorIF;
 import org.lexgrid.extension.loaders.icdgem.utils.BaseConcept;
 import org.lexgrid.extension.loaders.icdgem.utils.ICDConceptFactory;
 import org.lexgrid.extension.loaders.icdgem.utils.ICDGEMConstants;
 import org.lexgrid.extension.loaders.icdgem.utils.ICDGEMProperties;
 
-public class GemFileEntry {
+public class GemFileEntry implements Comparable<GemFileEntry>{
 	public static final int ON = 1;
 	public static final int OFF = 0;
 	
@@ -153,6 +152,24 @@ public class GemFileEntry {
 		ICDGEMProperties props = new ICDGEMProperties(ICDGEMConstants.ICD10_TO_9_CM_DESC, "1.01", null);
 		GemFileEntry gfe1 = new GemFileEntry("81603 S12301A 10243", props);
 		System.out.println("gfe1: " + gfe1.toString());
+	}
+
+	public int compareTo(GemFileEntry gfe) {
+		int rv = 0;
+		if(gfe._scenario == this._scenario) {
+			if(gfe._choiceList == this._choiceList) {
+				rv = 0;
+			} else if(gfe._choiceList < this._choiceList) {
+				rv = 1;
+			} else {
+				rv = -1;
+			}
+		} else if (gfe._scenario < this._scenario) {
+			rv = 1;
+		} else {
+			rv = -1;
+		}
+		return rv;
 	}
 
 }
