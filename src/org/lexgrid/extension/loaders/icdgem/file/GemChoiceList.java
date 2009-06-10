@@ -23,5 +23,4 @@ public class GemChoiceList {
 	public void addMember(GemFileEntry member) {
 		_choices.add(member);
 	}
-
 }

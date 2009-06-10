@@ -6,14 +6,12 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.StringTokenizer;
 
 import org.LexGrid.messaging.LgMessageDirectorIF;
 import org.lexgrid.extension.loaders.icdgem.utils.Association;
 import org.lexgrid.extension.loaders.icdgem.utils.BaseConcept;
 import org.lexgrid.extension.loaders.icdgem.utils.CodingScheme;
 import org.lexgrid.extension.loaders.icdgem.utils.ComplexConcept;
-import org.lexgrid.extension.loaders.icdgem.utils.ICDConceptFactory;
 import org.lexgrid.extension.loaders.icdgem.utils.ICDGEMConstants;
 import org.lexgrid.extension.loaders.icdgem.utils.ICDGEMProperties;
 import org.lexgrid.extension.loaders.icdgem.utils.RootConcept;
@@ -23,16 +21,8 @@ public class FileProcessor {
 	public static CodingScheme process(String fileName, ICDGEMProperties props) {
 		LgMessageDirectorIF md = props.getMessageDirector();
 		GemFileEntry gfe = null;
-		ArrayList<Association> hasSubTypeAssociations = new ArrayList<Association>();
-		ArrayList<Association> MapsToAssociations = new ArrayList<Association>();
-		ArrayList<Association> containsAssociations = new ArrayList<Association>();
-		ArrayList<BaseConcept> concepts = new ArrayList<BaseConcept>();
-		
 		ArrayList<GemFileEntry> subSet = new ArrayList<GemFileEntry>();
-		
-		ArrayList<BaseConcept> complexConceptParts = new ArrayList<BaseConcept>();
 		RootConcept root = new RootConcept(props); 
-		
 		
 		CodingScheme cs = new CodingScheme();
 		cs.setCopyright(props.getCsCopyright());
@@ -43,7 +33,6 @@ public class FileProcessor {
 		cs.setFormalName(props.getCsUri());
 		cs.setSource(props.getCsSource());
 		cs.setRepresentsVersion("??");
-		
 		
 		try {
 			BufferedReader fileReader = new BufferedReader(new FileReader(fileName));
@@ -112,18 +101,6 @@ public class FileProcessor {
 			ArrayList<GemScenario> scenarios = getScenarios(subSet);
 			processScenarios(cs, root, scenarios, props);
 		}
-		BaseConcept top = null;
-		GemFileEntry gfe = null;
-		String code = null;
-		int conType = -99;
-		
-		for(int i = 0; i < subSet.size(); ++i) {
-			gfe = subSet.get(i);
-			if (i == 0) {
-				top = gfe.getSourceConcept();
-			}
-		}
-		
 	}
 	
 	private static void processScenarios(CodingScheme cs, RootConcept root, ArrayList<GemScenario> scenarios, ICDGEMProperties props) {
@@ -217,11 +194,75 @@ public class FileProcessor {
 		}
 	}
 	
-	private static void processMultipuleChoiceLists(CodingScheme cs, RootConcept root, GemChoiceList top, ArrayList<GemChoiceList> others, ICDGEMProperties props) {
-		BaseConcept bc = null;
+	private static void processMultipuleChoiceLists(CodingScheme cs, RootConcept root, GemChoiceList tops, ArrayList<GemChoiceList> others, ICDGEMProperties props) {
 		GemTree gt = null;
 		GemTreeNode gtn = null;
-		GemFileEntry gfe = null;		
+		GemFileEntry gfe = null;
+		GemChoiceList gcl = null;
+		ArrayList<GemTreeNode> newNodes = null;
+		
+		for(int i=0; i<tops.getSize(); ++i) {
+			gfe = tops.getMember(i);
+			gtn = new GemTreeNode(gfe.getTargetConcept());
+			gt = new GemTree(gtn);
+			for(int j=0; j<others.size(); ++j) {
+				gcl = others.get(i);
+				newNodes = convertChoiceListToTreeNodes(gcl);
+				gt.addNewLevel(newNodes);
+			}
+			processTree(cs, root, gt, props);
+		}
+	}
+	
+	private static void processTree(CodingScheme cs, RootConcept root, GemTree gt, ICDGEMProperties props) {
+		ArrayList<GemComboEntry> combos = gt.getCombinations();
+		ComplexConcept comCon = null;
+		GemComboEntry gce = null;
+		for(int i=0; i<combos.size(); ++i) {
+			// create complex concept
+			gce = combos.get(i);
+			comCon = new ComplexConcept(gce.toString(), props);
+			
+			// add to coding scheme
+			cs.addConcpet(comCon);
+			
+			// reference concept
+			BaseConcept src = gce.getPart(0);
+			
+			// create has SubType association
+			Association hasSubType = new Association(ICDGEMConstants.ASSOCIATION_HAS_SUBTYPE, root.getSourceCodingScheme(), root.getCode(), 
+					src.getSourceCodingScheme(), src.getCode());
+			cs.addHasSubTypeAssociation(hasSubType); 
+			
+			// create mapsTo association
+			Association mapsTo = new Association(ICDGEMConstants.ASSOCIATION_MAPS_TO, src.getSourceCodingScheme(), src.getCode(), 
+					comCon.getSourceCodingScheme(), comCon.getCode());
+			cs.addMapsToAssociation(mapsTo);
+			
+			// create contains associations
+			Association contains = null;
+			BaseConcept tgt = null;
+			for(int j=0; i<gce.getSize(); ++i) {
+				tgt = gce.getPart(j);
+				contains = new Association(ICDGEMConstants.ASSOCIATION_CONTAINS, comCon.getSourceCodingScheme(), comCon.getCode(),
+						tgt.getSourceCodingScheme(), tgt.getCode());
+				cs.addContainsAssociation(contains);
+			}
+		}
+
+		
+	}
+	
+	private static ArrayList<GemTreeNode> convertChoiceListToTreeNodes(GemChoiceList cl) {
+		ArrayList<GemTreeNode> treeNodes = new ArrayList<GemTreeNode>();
+		GemTreeNode gtn = null;
+		GemFileEntry gfe = null;
+		for(int i=0; i<cl.getSize(); ++i) {
+			gfe = cl.getMember(i);
+			gtn = new GemTreeNode(gfe.getTargetConcept());
+			treeNodes.add(gtn);
+		}
+		return treeNodes;
 	}
 	
 	private static void processSingleChoiceList(CodingScheme cs, RootConcept root, GemChoiceList cl, ICDGEMProperties props) {
@@ -329,15 +370,5 @@ public class FileProcessor {
 					gfe.getTargetCodingScheme(), gfe.getTargetCode());
 		}
 		cs.addMapsToAssociation(mapsTo);
-	}
-	
-	private static Association createHasSubTypeAssociation(RootConcept root, String tgtCode, ICDGEMProperties props, int srcCon) {
-		return new Association(
-				ICDGEMConstants.ASSOCIATION_HAS_SUBTYPE, // relation name
-				props.getCsLocalName(), // sourceCodingScheme
-				root.getCode(),         // sourceCode
-				props.getCsLocalName(), // targetCodingScheme
-				tgtCode);               // targetCode)
-	}
-
+	}	
 }

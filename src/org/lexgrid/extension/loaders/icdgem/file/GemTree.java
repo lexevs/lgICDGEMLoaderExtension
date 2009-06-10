@@ -47,45 +47,27 @@ public class GemTree {
 		}
 	}
 	
-	public ArrayList<String> getCombinations() {
-		Stack<GemTreeNode> combination = new Stack<GemTreeNode>();
-		ArrayList<String> returnValue = new ArrayList<String>();
-		StringBuffer buf;
+	public ArrayList<GemComboEntry> getCombinations() {
+		ArrayList<GemComboEntry> returnValue = new ArrayList<GemComboEntry>();
 		GemTreeNode leaf;
 		ArrayList<GemTreeNode> leafNodes = this.getLeafNodes();
+		GemComboEntry gce = null;
 		for(int i=0; i<leafNodes.size(); ++i) {
 			leaf = leafNodes.get(i);
-			combination.clear();
-			buf = new StringBuffer();
-			getCombination(combination, leaf);
-			getTargetCodeValues(combination, buf);
-			returnValue.add(buf.toString());
+			gce = new GemComboEntry();
+			getCombination(gce, leaf);
+			returnValue.add(gce);
 		}
 		return returnValue;
 	}
 	
-	private void getTargetCodeValues(Stack<GemTreeNode> stack, StringBuffer buf) {
-		GemTreeNode node;
-		boolean done = false;
-		while(!done) {
-			node = stack.pop();
-			BaseConcept temp = node.getValue();
-			buf.append(temp.getCode());
-			if(stack.empty()) {
-				done = true;
-			} else {
-				buf.append(" AND ");
-			}
-		}
-	}
-	
-	private void getCombination(Stack<GemTreeNode> stack, GemTreeNode node) {
+	private void getCombination(GemComboEntry gce, GemTreeNode node) {
 		GemTreeNode parent = node.getParent();
 		if(parent == null) {
 			return;
 		}
-		stack.push(node);
-		getCombination(stack, parent);
+		gce.addPart(node.getValue());
+		getCombination(gce, parent);
 	}
 	
 	public GemTreeNode getRootNode() {
@@ -114,10 +96,10 @@ public class GemTree {
 		tgtCodes.add(tempTgtCode);
 		gtree.addNewLevel(tgtCodes);
 		
-		ArrayList<String> combos = gtree.getCombinations();
+		ArrayList<GemComboEntry> combos = gtree.getCombinations();
 		System.out.println("Combinations for " + root.getValue() + ": ");
 		for(int i=0; i<combos.size(); ++i) {
-			String temp = combos.get(i);
+			GemComboEntry temp = combos.get(i);
 			System.out.println("  [" + i + "] " + temp);
 		}
 	}
