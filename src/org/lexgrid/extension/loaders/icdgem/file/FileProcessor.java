@@ -41,7 +41,7 @@ public class FileProcessor {
 			GemFileEntry prevGfe = null;
             while (!done) {
     			line = fileReader.readLine();
-    			if(line == null) {
+    			if(line == null || line.length() == 0) {
     				done = true;
     			} else {
                 	line = line.trim();
@@ -93,10 +93,17 @@ public class FileProcessor {
 	 * The above is an example of a complex code mapping entry.
 	 */
 	private static void processSubSet(CodingScheme cs, RootConcept root, ArrayList<GemFileEntry> subSet, ICDGEMProperties props) {
-		
+	    
 		if(subSet.size() == 1) {
-			processSimpleEntry(cs, root, subSet, props);
-		} else {
+			GemFileEntry gfe = subSet.get(0);
+			processSimpleEntry(cs, root, gfe, props);
+		} else if(subSet.get(0).getCombinationFlag() == 0) { // multipule single mappings
+			GemFileEntry gfe = null;
+			for(int i=0; i<subSet.size(); ++i) {
+				gfe = subSet.get(i);
+				processSimpleEntry(cs, root, gfe, props);
+			}
+		} else {  // complex mapping
 			Collections.sort(subSet);
 			ArrayList<GemScenario> scenarios = getScenarios(subSet);
 			processScenarios(cs, root, scenarios, props);
@@ -206,7 +213,7 @@ public class FileProcessor {
 			gtn = new GemTreeNode(gfe.getTargetConcept());
 			gt = new GemTree(gtn);
 			for(int j=0; j<others.size(); ++j) {
-				gcl = others.get(i);
+				gcl = others.get(j);
 				newNodes = convertChoiceListToTreeNodes(gcl);
 				gt.addNewLevel(newNodes);
 			}
@@ -352,8 +359,7 @@ public class FileProcessor {
 		return scenarios;
 	}
 	
-	private static void processSimpleEntry(CodingScheme cs, RootConcept root, ArrayList<GemFileEntry> subSet, ICDGEMProperties props) {
-		GemFileEntry gfe = subSet.get(0); // a simple entry should always be a list of length 1;
+	private static void processSimpleEntry(CodingScheme cs, RootConcept root, GemFileEntry gfe, ICDGEMProperties props) {
 		// create a hasSubType association
 		// Association(String relationName, String sourceCodingScheme, String sourceCode, String targetCodingScheme, String targetCode)
 		Association hasSubType = new Association(ICDGEMConstants.ASSOCIATION_HAS_SUBTYPE, root.getSourceCodingScheme(), root.getCode(), 
@@ -371,4 +377,30 @@ public class FileProcessor {
 		}
 		cs.addMapsToAssociation(mapsTo);
 	}	
+	
+	public static void printCs(CodingScheme cs) {
+		System.out.println("FileProcessor: printCs: entry");
+		System.out.println("FileProcessor: printCs: number of concepts: " + cs.getConcepts().size());
+		ArrayList<BaseConcept> cons = cs.getConcepts();
+		BaseConcept con = null;
+		for(int i=0; i<cons.size(); ++i) {
+			con = cons.get(i);
+			System.out.println("  [" + i + "]: " + con.toString());			
+		}
+		
+		
+		System.out.println("FileProcessor: printCs: number of hasSubType associations: " + cs.getHasSubTypeAssociations().size());
+		System.out.println("FileProcessor: printCs: number of mapsTo associations: " + cs.getMapsToAssociations().size());
+		System.out.println("FileProcessor: printCs: number of contains associations: " + cs.getContainsAssociations().size());
+		System.out.println("FileProcessor: printCs: exit");
+	}
+	
+	public static void main(String[] args) {
+		String inFile = "C:/ibm/eclipse341b/workspace/lgICDGEMLoaderExtension/resources/testData/icdGem/small_2009_I9gem.txt";
+		ICDGEMProperties props = new ICDGEMProperties(ICDGEMConstants.ICD9_TO_10_CM_DESC, "1.01", null);
+		CodingScheme cs = FileProcessor.process(inFile, props);
+		printCs(cs);
+		
+	}
+	
 }
