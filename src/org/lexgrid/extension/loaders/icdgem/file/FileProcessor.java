@@ -93,7 +93,8 @@ public class FileProcessor {
 	 * The above is an example of a complex code mapping entry.
 	 */
 	private static void processSubSet(CodingScheme cs, RootConcept root, ArrayList<GemFileEntry> subSet, ICDGEMProperties props) {
-	    
+		GemFileEntry temp = subSet.get(0);
+		addHasSubTypeAssociation(cs, root, temp, props);
 		if(subSet.size() == 1) {
 			GemFileEntry gfe = subSet.get(0);
 			processSimpleEntry(cs, root, gfe, props);
@@ -187,38 +188,27 @@ public class FileProcessor {
 		if(choiceLists.size() == 1) {
 			processSingleChoiceList(cs, root, choiceLists.get(0), props); 
 		} else {
-			// split the choice lists into 'top' an 'other' nodes
-			GemChoiceList top = null;
-			ArrayList<GemChoiceList> others = new ArrayList<GemChoiceList>();
-			for(int i=0; i<choiceLists.size(); ++i) {
-				if(i == 0) {
-					top = choiceLists.get(i);
-				} else {
-					others.add(choiceLists.get(i));
-				}
-			}
-			processMultipuleChoiceLists(cs, root, top, others, props);
+			processMultipuleChoiceLists(cs, root, choiceLists, props);
 		}
 	}
 	
-	private static void processMultipuleChoiceLists(CodingScheme cs, RootConcept root, GemChoiceList tops, ArrayList<GemChoiceList> others, ICDGEMProperties props) {
+	private static void processMultipuleChoiceLists(CodingScheme cs, RootConcept root, ArrayList<GemChoiceList> choiceLists, ICDGEMProperties props) {
 		GemTree gt = null;
-		GemTreeNode gtn = null;
 		GemFileEntry gfe = null;
 		GemChoiceList gcl = null;
 		ArrayList<GemTreeNode> newNodes = null;
 		
-		for(int i=0; i<tops.getSize(); ++i) {
-			gfe = tops.getMember(i);
-			gtn = new GemTreeNode(gfe.getTargetConcept());
-			gt = new GemTree(gtn);
-			for(int j=0; j<others.size(); ++j) {
-				gcl = others.get(j);
-				newNodes = convertChoiceListToTreeNodes(gcl);
-				gt.addNewLevel(newNodes);
-			}
-			processTree(cs, root, gt, props);
+		// create top node; it will be the root of our sub tree
+		gcl = choiceLists.get(0);
+		gfe = gcl.getMember(0);
+		GemTreeNode top = new GemTreeNode(gfe.getSourceConcept());
+		gt = new GemTree(top);
+		for(int j=0; j<choiceLists.size(); ++j) {
+			gcl = choiceLists.get(j);
+			newNodes = convertChoiceListToTreeNodes(gcl);
+			gt.addNewLevel(newNodes);
 		}
+		processTree(cs, root, gt, props);
 	}
 	
 	private static void processTree(CodingScheme cs, RootConcept root, GemTree gt, ICDGEMProperties props) {
@@ -236,11 +226,6 @@ public class FileProcessor {
 			// reference concept
 			BaseConcept src = gce.getPart(0);
 			
-			// create has SubType association
-			Association hasSubType = new Association(ICDGEMConstants.ASSOCIATION_HAS_SUBTYPE, root.getSourceCodingScheme(), root.getCode(), 
-					src.getSourceCodingScheme(), src.getCode());
-			cs.addHasSubTypeAssociation(hasSubType); 
-			
 			// create mapsTo association
 			Association mapsTo = new Association(ICDGEMConstants.ASSOCIATION_MAPS_TO, src.getSourceCodingScheme(), src.getCode(), 
 					comCon.getSourceCodingScheme(), comCon.getCode());
@@ -249,7 +234,7 @@ public class FileProcessor {
 			// create contains associations
 			Association contains = null;
 			BaseConcept tgt = null;
-			for(int j=0; i<gce.getSize(); ++i) {
+			for(int j=0; j<gce.getSize(); ++j) {
 				tgt = gce.getPart(j);
 				contains = new Association(ICDGEMConstants.ASSOCIATION_CONTAINS, comCon.getSourceCodingScheme(), comCon.getCode(),
 						tgt.getSourceCodingScheme(), tgt.getCode());
@@ -291,11 +276,6 @@ public class FileProcessor {
 		// create concept
 		ComplexConcept comCon = new ComplexConcept(complexCode.toString(), props); 
 		cs.addConcpet(comCon);
-		
-		// create has SubType association
-		Association hasSubType = new Association(ICDGEMConstants.ASSOCIATION_HAS_SUBTYPE, root.getSourceCodingScheme(), root.getCode(), 
-				src.getSourceCodingScheme(), src.getCode());
-		cs.addHasSubTypeAssociation(hasSubType); 
 		
 		// create mapsTo association
 		Association mapsTo = new Association(ICDGEMConstants.ASSOCIATION_MAPS_TO, src.getSourceCodingScheme(), src.getCode(), 
@@ -359,13 +339,15 @@ public class FileProcessor {
 		return scenarios;
 	}
 	
-	private static void processSimpleEntry(CodingScheme cs, RootConcept root, GemFileEntry gfe, ICDGEMProperties props) {
+	private static void addHasSubTypeAssociation(CodingScheme cs, RootConcept root, GemFileEntry gfe, ICDGEMProperties props) {
 		// create a hasSubType association
 		// Association(String relationName, String sourceCodingScheme, String sourceCode, String targetCodingScheme, String targetCode)
 		Association hasSubType = new Association(ICDGEMConstants.ASSOCIATION_HAS_SUBTYPE, root.getSourceCodingScheme(), root.getCode(), 
 				gfe.getSourceCodingScheme(), gfe.getSourceCode());
-		cs.addHasSubTypeAssociation(hasSubType);
-		
+		cs.addHasSubTypeAssociation(hasSubType);		
+	}
+	
+	private static void processSimpleEntry(CodingScheme cs, RootConcept root, GemFileEntry gfe, ICDGEMProperties props) {		
 		// create a mapsTo association
 		Association mapsTo = null;
 		if(gfe.getNoMapFlag() == 1) {
@@ -387,16 +369,37 @@ public class FileProcessor {
 			con = cons.get(i);
 			System.out.println("  [" + i + "]: " + con.toString());			
 		}
+				
+		ArrayList<Association> hasSubTypes = cs.getHasSubTypeAssociations();
+		System.out.println("FileProcessor: printCs: number of hasSubType associations: " + hasSubTypes.size());		
+		Association hasSubType = null;
+		for(int i=0; i<hasSubTypes.size(); ++i) {
+			hasSubType = hasSubTypes.get(i);
+			System.out.println("  [" + i + "]: src: " + hasSubType.getSourceCode() + " tgt: " + hasSubType.getTargetCode());			
+		}
+		
+		ArrayList<Association> mapsTos = cs.getMapsToAssociations();
+		System.out.println("FileProcessor: printCs: number of mapsTo associations: " + mapsTos.size());
+		Association mapsTo = null;
+		for(int i=0; i<mapsTos.size(); ++i) {
+			mapsTo = mapsTos.get(i);
+			System.out.println("  [" + i + "]: src: " + mapsTo.getSourceCode() + " tgt: " + mapsTo.getTargetCode());			
+		}
+		
+		ArrayList<Association> containss = cs.getContainsAssociations();
+		System.out.println("FileProcessor: printCs: number of contains associations: " + containss.size());		
+		Association contains = null;
+		for(int i=0; i<containss.size(); ++i) {
+			contains = containss.get(i);
+			System.out.println("  [" + i + "]: src: " + contains.getSourceCode() + " tgt: " + contains.getTargetCode());			
+		}
 		
 		
-		System.out.println("FileProcessor: printCs: number of hasSubType associations: " + cs.getHasSubTypeAssociations().size());
-		System.out.println("FileProcessor: printCs: number of mapsTo associations: " + cs.getMapsToAssociations().size());
-		System.out.println("FileProcessor: printCs: number of contains associations: " + cs.getContainsAssociations().size());
 		System.out.println("FileProcessor: printCs: exit");
 	}
 	
 	public static void main(String[] args) {
-		String inFile = "C:/ibm/eclipse341b/workspace/lgICDGEMLoaderExtension/resources/testData/icdGem/small_2009_I9gem.txt";
+		String inFile = "C:/ibm/eclipse341b/workspace/lgICDGEMLoaderExtension/resources/testData/icdGem/super_small_2009_I9gem.txt";
 		ICDGEMProperties props = new ICDGEMProperties(ICDGEMConstants.ICD9_TO_10_CM_DESC, "1.01", null);
 		CodingScheme cs = FileProcessor.process(inFile, props);
 		printCs(cs);
