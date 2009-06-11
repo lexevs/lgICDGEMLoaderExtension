@@ -9,9 +9,11 @@ import org.lexgrid.extension.loaders.icdgem.utils.ICDGEMProperties;
 
 public class GemTree {
 	private GemTreeNode _root;
+	private BaseConcept _sourceCon;
 	
-	public GemTree(GemTreeNode root) {
+	public GemTree(GemTreeNode root, BaseConcept sourceCon) {
 		_root = root;
+		_sourceCon = sourceCon;
 	}
 	
 	private ArrayList<GemTreeNode> getLeafNodes() {
@@ -31,7 +33,11 @@ public class GemTree {
 			}
 		}
 	}
-		
+	
+	public BaseConcept getSourceConcept() {
+		return _sourceCon;
+	}
+	
 	public void addNewLevel(ArrayList<GemTreeNode> newLeafs) {
 		ArrayList<GemTreeNode> curLeafNodes = this.getLeafNodes();
 		ArrayList<GemTreeNode> newLeafNodes = new ArrayList<GemTreeNode>();
@@ -83,7 +89,7 @@ public class GemTree {
 		GemFileEntry gfe3 = new GemFileEntry("80606 S14115A 10112", props);
 		
 		GemTreeNode root = new GemTreeNode(gfe1.getSourceConcept());
-		GemTree gtree = new GemTree(root);
+		GemTree gtree = new GemTree(root, gfe1.getSourceConcept());
 		
 		ArrayList<GemTreeNode> tgtCodes = new ArrayList<GemTreeNode>();
 		GemTreeNode tempTgtCode = new GemTreeNode(gfe1.getTargetConcept());

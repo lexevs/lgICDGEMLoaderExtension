@@ -64,6 +64,8 @@ public class FileProcessor {
                 	}
     			}
             }
+            subSet.add(prevGfe);
+            processSubSet(cs, root, subSet, props);
 			
 		} catch (FileNotFoundException e) {
 			md.error("FileProcessor: process: " + e.getMessage());
@@ -202,7 +204,7 @@ public class FileProcessor {
 		gcl = choiceLists.get(0);
 		gfe = gcl.getMember(0);
 		GemTreeNode top = new GemTreeNode(gfe.getSourceConcept());
-		gt = new GemTree(top);
+		gt = new GemTree(top, gfe.getSourceConcept());
 		for(int j=0; j<choiceLists.size(); ++j) {
 			gcl = choiceLists.get(j);
 			newNodes = convertChoiceListToTreeNodes(gcl);
@@ -224,7 +226,7 @@ public class FileProcessor {
 			cs.addConcpet(comCon);
 			
 			// reference concept
-			BaseConcept src = gce.getPart(0);
+			BaseConcept src = gt.getSourceConcept();
 			
 			// create mapsTo association
 			Association mapsTo = new Association(ICDGEMConstants.ASSOCIATION_MAPS_TO, src.getSourceCodingScheme(), src.getCode(), 
@@ -399,7 +401,7 @@ public class FileProcessor {
 	}
 	
 	public static void main(String[] args) {
-		String inFile = "C:/ibm/eclipse341b/workspace/lgICDGEMLoaderExtension/resources/testData/icdGem/super_small_2009_I9gem.txt";
+		String inFile = "C:/ibm/eclipse341b/workspace/lgICDGEMLoaderExtension/resources/testData/icdGem/small_2009_I9gem.txt";
 		ICDGEMProperties props = new ICDGEMProperties(ICDGEMConstants.ICD9_TO_10_CM_DESC, "1.01", null);
 		CodingScheme cs = FileProcessor.process(inFile, props);
 		printCs(cs);
