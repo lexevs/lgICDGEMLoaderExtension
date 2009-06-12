@@ -22,21 +22,22 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.TreeSet;
 
-import org.LexGrid.LexBIG.Preferences.loader.LoadPreferences.LoaderPreferences;
 import org.LexGrid.messaging.LgMessageDirectorIF;
 import org.LexGrid.util.sql.DBUtility;
 import org.LexGrid.util.sql.lgTables.SQLTableConstants;
 import org.LexGrid.util.sql.lgTables.SQLTableUtilities;
 
+import org.lexgrid.extension.loaders.icdgem.file.FileProcessor;
 import org.lexgrid.extension.loaders.icdgem.utils.Association;
 import org.lexgrid.extension.loaders.icdgem.utils.BaseConcept;
 import org.lexgrid.extension.loaders.icdgem.utils.CodingScheme;
-import org.lexgrid.extension.loaders.icdgem.utils.ICDConceptFactory;
+import org.lexgrid.extension.loaders.icdgem.utils.ICDGEMConstants;
 import org.lexgrid.extension.loaders.icdgem.utils.ICDGEMProperties;
-import org.lexgrid.extension.loaders.icdgem.utils.TextUtility;
+import org.lexgrid.extension.loaders.icdgem.utils.RootConcept;
 
 /**
  * Conversion tool for loading ICD GEM files into SQL.
@@ -46,77 +47,69 @@ import org.lexgrid.extension.loaders.icdgem.utils.TextUtility;
  *          17:13:22 +0000 (Thu, 30 Aug 2007) $
  */
 public class ICDGEMToLex {
-    private String token_ = "\t";
-    private LgMessageDirectorIF messages_;
-    private Connection sqlConnection_;
-    private SQLTableUtilities tableUtility_;
-    private SQLTableConstants tableConstants_;
-    private BaseConcept specialConcept = null;
-    private CodingScheme codingScheme_;
+	private ICDGEMProperties _props;
+    private LgMessageDirectorIF _messages;
+    private Connection _sqlConnection;
+    private SQLTableUtilities _tableUtility;
+    private SQLTableConstants _tableConstants;
+    private CodingScheme _codingScheme;
 
     /**
      * @return the codingSchemeName
      */
     public CodingScheme getCodingScheme() {
-        return this.codingScheme_;
+        return _codingScheme;
     }
     
-    public ICDGEMToLex(String fileLocation, String token, String sqlServer, String sqlDriver,
-            String sqlUsername, String sqlPassword, String tablePrefix, LoaderPreferences loaderPrefs,
-            LgMessageDirectorIF messageDirector, ICDGEMProperties props) throws Exception {
-        messages_ = messageDirector;
-        if (token != null && token.length() > 0) {
-            token_ = token;
-        }
+    public ICDGEMToLex(String fileLocation, String sqlServer, String sqlDriver,
+            String sqlUsername, String sqlPassword, String tablePrefix, ICDGEMProperties props) throws Exception {
+        _messages = props.getMessageDirector();
+        _props = props;
 
-        // this verifies all of the rules except the description rules - and
-        // determines A or B.
-        codingScheme_ = TextUtility.readAndVerifyConcepts(fileLocation, messages_, token_, props);
+        _codingScheme = FileProcessor.process(fileLocation, props);
 
         // set up the sql tables
-        prepareDatabase(codingScheme_.codingSchemeName, sqlServer, sqlDriver, sqlUsername, sqlPassword,
+        prepareDatabase(_codingScheme.getCsName(), sqlServer, sqlDriver, sqlUsername, sqlPassword,
                 tablePrefix);
 
-        tableConstants_ = tableUtility_.getSQLTableConstants();
+        _tableConstants = _tableUtility.getSQLTableConstants();
 
-        // load the concepts, verify the description status.
-        loadConcepts(codingScheme_);
-
-        loadHasSubtypeRelations(codingScheme_);
-        loadRelations(codingScheme_);
-
-        sqlConnection_.close();
+        loadConcepts(_codingScheme);
+        loadHasSubtypeRelations(_codingScheme);
+        loadMapsToRelations(_codingScheme);
+        loadContainsRelations(_codingScheme);
+        _sqlConnection.close();
 
     }
 
     private void prepareDatabase(String codingScheme, String sqlServer, String sqlDriver, String sqlUsername,
             String sqlPassword, String tablePrefix) throws Exception {
         try {
-            messages_.info("ICD10ToLex: prepareDatabase: Connecting to database");
-            sqlConnection_ = DBUtility.connectToDatabase(sqlServer, sqlDriver, sqlUsername, sqlPassword);
-            // gsm_ = new GenericSQLModifier(sqlConnection_);
+            _messages.info("ICDGEMToLex: prepareDatabase: Connecting to database");
+            _sqlConnection = DBUtility.connectToDatabase(sqlServer, sqlDriver, sqlUsername, sqlPassword);
+            // gsm_ = new GenericSQLModifier(_sqlConnection);
         } catch (ClassNotFoundException e) {
-            messages_
-                    .fatalAndThrowException("ICD10ToLex: prepareDatabase: FATAL ERROR - The class you specified for your sql driver could not be found on the path.");
+            _messages
+                    .fatalAndThrowException("ICDGEMToLex: prepareDatabase: FATAL ERROR - The class you specified for your sql driver could not be found on the path.");
         }
 
-        tableUtility_ = new SQLTableUtilities(sqlConnection_, tablePrefix);
+        _tableUtility = new SQLTableUtilities(_sqlConnection, tablePrefix);
 
-        messages_.info("ICD10ToLex: prepareDatabase: Creating tables");
-        tableUtility_.createDefaultTables();
+        _messages.info("ICDGEMToLex: prepareDatabase: Creating tables");
+        _tableUtility.createDefaultTables();
 
-        messages_.info("ICD10ToLex: prepareDatabase: Creating constraints");
-        tableUtility_.createDefaultTableConstraints();
+        _messages.info("ICDGEMToLex: prepareDatabase: Creating constraints");
+        _tableUtility.createDefaultTableConstraints();
 
-        messages_.info("ICD10ToLex: prepareDatabase: Cleaning tables");
-        tableUtility_.cleanTables(codingScheme);
+        _messages.info("ICDGEMToLex: prepareDatabase: Cleaning tables");
+        _tableUtility.cleanTables(codingScheme);
     }
 
     private void loadConcepts(CodingScheme codingScheme) throws Exception {
-        PreparedStatement insert = sqlConnection_.prepareStatement(tableConstants_
+        PreparedStatement insert = _sqlConnection.prepareStatement(_tableConstants
                 .getInsertStatementSQL(SQLTableConstants.CODING_SCHEME));
 
-        messages_.info("ICD10ToLex: loadConcepts: Loading coding scheme");
+        _messages.info("ICDGEMToLex: loadConcepts: Loading coding scheme");
         int ii = 1;
         /*
         codingSchemeName, 
@@ -132,30 +125,30 @@ public class ICDGEMToLex {
         copyright
         */
 
-        insert.setString(ii++, codingScheme.codingSchemeName); // codingSchemeName
-        insert.setString(ii++, codingScheme.codingSchemeId); // codingSchemeURI
-        insert.setString(ii++, codingScheme.representsVersion); // representsVersion
-        insert.setString(ii++, codingScheme.formalName); // formalName
-        insert.setString(ii++, codingScheme.defaultLanguage); // defaultLanguage
-        insert.setInt(ii++, codingScheme.concepts.length); // approxNumConcepts
+        insert.setString(ii++, codingScheme.getCsName()); // codingSchemeName
+        insert.setString(ii++, codingScheme.getCsId()); // codingSchemeURI
+        insert.setString(ii++, codingScheme.getRepresentsVersion()); // representsVersion
+        insert.setString(ii++, codingScheme.getFormalName()); // formalName
+        insert.setString(ii++, codingScheme.getDefaultLanguage()); // defaultLanguage
+        insert.setInt(ii++, codingScheme.getConcepts().size()); // approxNumConcepts
         DBUtility.setBooleanOnPreparedStatment(insert, ii++, new Boolean(false)); // isActive
         insert.setInt(ii++, 0); // entryStateId
         insert.setString(ii++, SQLTableConstants.TBLCOLVAL_MISSING); // releaseURI
-        insert.setString(ii++, codingScheme.entityDescription); // entityDescription
-        insert.setString(ii++, codingScheme.copyright); // entityDescription
+        insert.setString(ii++, codingScheme.getEntityDescription()); // entityDescription
+        insert.setString(ii++, codingScheme.getCopyright()); // entityDescription
 
         try {
             insert.executeUpdate();
         } catch (SQLException e) {
-            messages_.fatalAndThrowException(
-                    "ICD10ToLex: loadConcepts: FATAL ERROR - It is likely that your coding scheme name or CodingSchemeId is not unique.", e);
+            _messages.fatalAndThrowException(
+                    "ICDGEMToLex: loadConcepts: FATAL ERROR - It is likely that your coding scheme name or CodingSchemeId is not unique.", e);
         }
 
         insert.close();
 
         try {
-            messages_.info("ICD10ToLex: loadConcepts: Loading coding scheme supported attributes");
-            insert = sqlConnection_.prepareStatement(tableConstants_
+            _messages.info("ICDGEMToLex: loadConcepts: Loading coding scheme supported attributes");
+            insert = _sqlConnection.prepareStatement(_tableConstants
                     .getInsertStatementSQL(SQLTableConstants.CODING_SCHEME_SUPPORTED_ATTRIBUTES));
             /*
             codingSchemeName, 
@@ -166,57 +159,119 @@ public class ICDGEMToLex {
             val1, 
             val2
             */
-            insert.setString(1, codingScheme.codingSchemeName); // codingSchemeName
+            insert.setString(1, codingScheme.getCsName()); // codingSchemeName
             insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_LANGUAGE); // supportedAttributeTag
-            insert.setString(3, codingScheme.defaultLanguage); // id
+            insert.setString(3, codingScheme.getDefaultLanguage()); // id
             insert.setString(4, ""); // uri
-            if (tableConstants_.supports2009Model()) {
-                insert.setString(5, codingScheme.defaultLanguage); // idValue
+            if (_tableConstants.supports2009Model()) {
+                insert.setString(5, codingScheme.getDefaultLanguage()); // idValue
                 insert.setString(6, SQLTableConstants.TBLCOLVAL_MISSING); // val1
                 insert.setString(7, ""); // val2
             }
             insert.executeUpdate();
             
-            // mct test
-            insert.setString(1, codingScheme.codingSchemeName);
+            // isA
+            insert.setString(1, codingScheme.getCsName());
             insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_ASSOCIATION);
             insert.setString(3, SQLTableConstants.TBLCOLVAL_ISA_ASSOCIATION);
             insert.setString(4, "");
-            if (tableConstants_.supports2009Model()) {
+            if (_tableConstants.supports2009Model()) {
                 insert.setString(5, SQLTableConstants.TBLCOLVAL_HASSUBTYPE_ASSOCIATION);
                 insert.setString(6, SQLTableConstants.TBLCOLVAL_MISSING);
                 insert.setString(7, "");
             }            
             insert.executeUpdate();
             
-            insert.setString(1, codingScheme.codingSchemeName);
+            // hasSubType
+            insert.setString(1, codingScheme.getCsName());
             insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_ASSOCIATION);
             insert.setString(3, SQLTableConstants.TBLCOLVAL_HASSUBTYPE_ASSOCIATION);
             insert.setString(4, "");
-            if (tableConstants_.supports2009Model()) {
+            if (_tableConstants.supports2009Model()) {
                 insert.setString(5, SQLTableConstants.TBLCOLVAL_HASSUBTYPE_ASSOCIATION);
                 insert.setString(6, SQLTableConstants.TBLCOLVAL_MISSING);
                 insert.setString(7, "");
             }
             insert.executeUpdate();
-
-            insert.setString(1, codingScheme.codingSchemeName);
-            insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_CODINGSCHEME);
-            insert.setString(3, codingScheme.codingSchemeName);
-            insert.setString(4, codingScheme.codingSchemeId);
-            if (tableConstants_.supports2009Model()) {
-                insert.setString(5, codingScheme.codingSchemeName);
+            
+            // mapsTo
+            insert.setString(1, codingScheme.getCsName());
+            insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_ASSOCIATION);
+            insert.setString(3, ICDGEMConstants.ASSOCIATION_MAPS_TO);
+            insert.setString(4, "");
+            if (_tableConstants.supports2009Model()) {
+                insert.setString(5, ICDGEMConstants.ASSOCIATION_MAPS_TO);
                 insert.setString(6, SQLTableConstants.TBLCOLVAL_MISSING);
                 insert.setString(7, "");
             }
+            insert.executeUpdate();
+            
+            // contains
+            insert.setString(1, codingScheme.getCsName());
+            insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_ASSOCIATION);
+            insert.setString(3, ICDGEMConstants.ASSOCIATION_CONTAINS);
+            insert.setString(4, "");
+            if (_tableConstants.supports2009Model()) {
+                insert.setString(5, ICDGEMConstants.ASSOCIATION_CONTAINS);
+                insert.setString(6, SQLTableConstants.TBLCOLVAL_MISSING);
+                insert.setString(7, "");
+            }
+            insert.executeUpdate();
+            
 
+            // supported coding scheme
+            insert.setString(1, codingScheme.getCsName());
+            insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_CODINGSCHEME);
+            insert.setString(3, codingScheme.getCsName());
+            insert.setString(4, codingScheme.getCsId());
+            if (_tableConstants.supports2009Model()) {
+                insert.setString(5, codingScheme.getCsName());
+                insert.setString(6, SQLTableConstants.TBLCOLVAL_MISSING);
+                insert.setString(7, "");
+            }
+            insert.executeUpdate();
+            
+            // supported coding scheme - ICD9
+            insert.setString(1, codingScheme.getCsName());
+            insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_CODINGSCHEME);
+            insert.setString(3, _props.getIcd9CmLocalName());
+            insert.setString(4, _props.getIcd9CmUri());
+            if (_tableConstants.supports2009Model()) {
+                insert.setString(5, _props.getIcd9CmLocalName());
+                insert.setString(6, SQLTableConstants.TBLCOLVAL_MISSING);
+                insert.setString(7, "");
+            }
             insert.executeUpdate();
 
-            insert.setString(1, codingScheme.codingSchemeName);
+            // supported coding scheme - ICD10 CM
+            insert.setString(1, codingScheme.getCsName());
+            insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_CODINGSCHEME);
+            insert.setString(3, _props.getIcd10CmLocalName());
+            insert.setString(4, _props.getIcd10CmUri());
+            if (_tableConstants.supports2009Model()) {
+                insert.setString(5, _props.getIcd10CmLocalName());
+                insert.setString(6, SQLTableConstants.TBLCOLVAL_MISSING);
+                insert.setString(7, "");
+            }
+            insert.executeUpdate();
+            
+            // supported coding scheme - ICD10 CM
+            insert.setString(1, codingScheme.getCsName());
+            insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_CODINGSCHEME);
+            insert.setString(3, _props.getIcd10PcsLocalName());
+            insert.setString(4, _props.getIcd10PcsUri());
+            if (_tableConstants.supports2009Model()) {
+                insert.setString(5, _props.getIcd10PcsLocalName());
+                insert.setString(6, SQLTableConstants.TBLCOLVAL_MISSING);
+                insert.setString(7, "");
+            }
+            insert.executeUpdate();
+
+            insert.setString(1, codingScheme.getCsName());
             insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_PROPERTY);
             insert.setString(3, SQLTableConstants.TBLCOLVAL_DEFINITION);
             insert.setString(4, "");
-            if (tableConstants_.supports2009Model()) {
+            if (_tableConstants.supports2009Model()) {
                 insert.setString(5, SQLTableConstants.TBLCOLVAL_DEFINITION);
                 insert.setString(6, SQLTableConstants.TBLCOLVAL_MISSING);
                 insert.setString(7, "");
@@ -225,40 +280,40 @@ public class ICDGEMToLex {
             insert.executeUpdate();
             insert.close();
 
-            insert = sqlConnection_.prepareStatement(tableConstants_
+            insert = _sqlConnection.prepareStatement(_tableConstants
                     .getInsertStatementSQL(SQLTableConstants.CODING_SCHEME_MULTI_ATTRIBUTES));
 
-            insert.setString(1, codingScheme.codingSchemeName);
+            insert.setString(1, codingScheme.getCsName());
             insert.setString(2, SQLTableConstants.TBLCOLVAL_LOCALNAME);
-            insert.setString(3, codingScheme.codingSchemeName);
-            if (tableConstants_.supports2009Model()) {
+            insert.setString(3, codingScheme.getCsName());
+            if (_tableConstants.supports2009Model()) {
                 insert.setString(4, "");
                 insert.setString(5, "");
             }
 
             insert.executeUpdate();
 
-            String codingSchemeIdTemp = codingScheme.codingSchemeId;
+            String codingSchemeIdTemp = codingScheme.getCsId();
             int temp = codingSchemeIdTemp.lastIndexOf(':');
             if (temp > 0 && ((temp + 1) <= codingSchemeIdTemp.length())) {
                 codingSchemeIdTemp = codingSchemeIdTemp.substring(temp + 1);
             }
 
-            insert.setString(1, codingScheme.codingSchemeName);
+            insert.setString(1, codingScheme.getCsName());
             insert.setString(2, SQLTableConstants.TBLCOLVAL_LOCALNAME);
             insert.setString(3, codingSchemeIdTemp);
-            if (tableConstants_.supports2009Model()) {
+            if (_tableConstants.supports2009Model()) {
                 insert.setString(4, "");
                 insert.setString(5, "");
             }
 
             insert.executeUpdate();
 
-            if (codingScheme.source != null && codingScheme.source.length() > 0) {
-                insert.setString(1, codingScheme.codingSchemeName);
+            if (codingScheme.getSource() != null && codingScheme.getSource().length() > 0) {
+                insert.setString(1, codingScheme.getCsName());
                 insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_SOURCE);
-                insert.setString(3, codingScheme.source);
-                if (tableConstants_.supports2009Model()) {
+                insert.setString(3, codingScheme.getSource());
+                if (_tableConstants.supports2009Model()) {
                     insert.setString(4, "");
                     insert.setString(5, "");
                 }
@@ -267,13 +322,13 @@ public class ICDGEMToLex {
             }
             insert.close();
         } catch (SQLException e) {
-            messages_.fatalAndThrowException("ICD10ToLex: loadConcepts: FATAL ERROR - Problem loading the coding scheme supported attributes", e);
+            _messages.fatalAndThrowException("ICDGEMToLex: loadConcepts: FATAL ERROR - Problem loading the coding scheme supported attributes", e);
         }
 
-        messages_.info("Loading relation definition");
+        _messages.info("Loading relation definition");
         try {
-            insert = sqlConnection_.prepareStatement(tableConstants_.getInsertStatementSQL(SQLTableConstants.RELATION));
-            insert.setString(1, codingScheme.codingSchemeName);
+            insert = _sqlConnection.prepareStatement(_tableConstants.getInsertStatementSQL(SQLTableConstants.RELATION));
+            insert.setString(1, codingScheme.getCsName());
             insert.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS);
             DBUtility.setBooleanOnPreparedStatment(insert, 3, new Boolean("true"), false);
             insert.setString(4, "");
@@ -281,12 +336,12 @@ public class ICDGEMToLex {
             insert.executeUpdate();
             insert.close();
         } catch (SQLException e) {
-            messages_.fatalAndThrowException("ICD10ToLex: loadConcepts: FATAL ERROR - Problem loading the relation definition", e);
+            _messages.fatalAndThrowException("ICDGEMToLex: loadConcepts: FATAL ERROR - Problem loading the relation definition", e);
         }
 
-        messages_.info("ICD10ToLex: loadConcepts: Loading isa association definition");
+        _messages.info("ICDGEMToLex: loadConcepts: Loading isa association definition");
         try {
-            insert = sqlConnection_.prepareStatement(tableConstants_
+            insert = _sqlConnection.prepareStatement(_tableConstants
                     .getInsertStatementSQL(SQLTableConstants.ASSOCIATION));
             /*
             codingSchemeName, 
@@ -309,9 +364,11 @@ public class ICDGEMToLex {
             entityDescription
             */
             int k = 1;
-            insert.setString(k++, codingScheme.codingSchemeName); // codingSchemeName
+            
+            // hasSubType/Isa
+            insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
-            insert.setString(k++, codingScheme.codingSchemeName); // entityCodeNamespace
+            insert.setString(k++, codingScheme.getCsId()); // entityCodeNamespace
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_ISA_ASSOCIATION); // entityCode
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_ISA_ASSOCIATION); // associationName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_ISA_ASSOCIATION); // forwardName
@@ -327,16 +384,60 @@ public class ICDGEMToLex {
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isFunctional
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isReverseFunctional
             insert.setString(k++, "The parent child relationships."); // entityDescription
-            
             insert.executeUpdate();
+            
+            // mapsTo
+            k = 1;
+            insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
+            insert.setString(k++, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
+            insert.setString(k++, codingScheme.getCsId()); // entityCodeNamespace
+            insert.setString(k++, ICDGEMConstants.ASSOCIATION_MAPS_TO); // entityCode
+            insert.setString(k++, ICDGEMConstants.ASSOCIATION_MAPS_TO); // associationName
+            insert.setString(k++, ICDGEMConstants.ASSOCIATION_MAPS_TO); // forwardName
+            insert.setString(k++, ""); // reverseName
+            insert.setString(k++, null); // inverseId
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isNavigable
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isTransitive
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isAntiTransitive
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("false"), false); // isSymmetric
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isAntiSymmetric
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isReflexive
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isAntiReflexive
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isFunctional
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isReverseFunctional
+            insert.setString(k++, "Mapping relationship."); // entityDescription
+            insert.executeUpdate();
+
+            // contains
+            k = 1;
+            insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
+            insert.setString(k++, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
+            insert.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
+            insert.setString(k++, ICDGEMConstants.ASSOCIATION_CONTAINS); // entityCode
+            insert.setString(k++, ICDGEMConstants.ASSOCIATION_CONTAINS); // associationName
+            insert.setString(k++, ICDGEMConstants.ASSOCIATION_CONTAINS); // forwardName
+            insert.setString(k++, ""); // reverseName
+            insert.setString(k++, null); // inverseId
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isNavigable
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isTransitive
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isAntiTransitive
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("false"), false); // isSymmetric
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isAntiSymmetric
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isReflexive
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isAntiReflexive
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isFunctional
+            DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isReverseFunctional
+            insert.setString(k++, "Relationship between compound concepts and their parts."); // entityDescription
+            insert.executeUpdate();
+            
             insert.close();
         } catch (SQLException e) {
-            messages_.fatalAndThrowException("ICD10ToLex: loadConcepts: FATAL ERROR - Problem loading the association definition", e);
+            _messages.fatalAndThrowException("ICDGEMToLex: loadConcepts: FATAL ERROR - Problem loading the association definition", e);
         }
         
-        messages_.info("ICD10ToLex: loadConcepts: Loading hassubtype association definition");
+        _messages.info("ICDGEMToLex: loadConcepts: Loading hassubtype association definition");
         try {
-            insert = sqlConnection_.prepareStatement(tableConstants_
+            insert = _sqlConnection.prepareStatement(_tableConstants
                     .getInsertStatementSQL(SQLTableConstants.ASSOCIATION));
             /*
             codingSchemeName, 
@@ -359,9 +460,9 @@ public class ICDGEMToLex {
             entityDescription
             */
             int k = 1;
-            insert.setString(k++, codingScheme.codingSchemeName); // codingSchemeName
+            insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
-            insert.setString(k++, codingScheme.codingSchemeName); // entityCodeNamespace
+            insert.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_HASSUBTYPE_ASSOCIATION); // entityCode
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_HASSUBTYPE_ASSOCIATION); // associationName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_HASSUBTYPE_ASSOCIATION); // forwardName
@@ -381,45 +482,47 @@ public class ICDGEMToLex {
             insert.executeUpdate();
             insert.close();
         } catch (SQLException e) {
-            messages_.fatalAndThrowException("ICD10ToLex: loadConcepts: FATAL ERROR - Problem loading the hassubtype association definition", e);
+            _messages.fatalAndThrowException("ICDGEMToLex: loadConcepts: FATAL ERROR - Problem loading the hassubtype association definition", e);
         }
 
         
         
 
-        insert = sqlConnection_.prepareStatement(tableConstants_.getInsertStatementSQL(SQLTableConstants.ENTITY));
+        insert = _sqlConnection.prepareStatement(_tableConstants.getInsertStatementSQL(SQLTableConstants.ENTITY));
 
-        PreparedStatement insertIntoConceptProperty = sqlConnection_.prepareStatement(tableConstants_
+        PreparedStatement insertIntoConceptProperty = _sqlConnection.prepareStatement(_tableConstants
                 .getInsertStatementSQL(SQLTableConstants.ENTITY_PROPERTY));
 
-        PreparedStatement checkForCode = sqlConnection_.prepareStatement("SELECT count(*) as found from "
-                + tableConstants_.getTableName(SQLTableConstants.ENTITY) + " WHERE "
-                + tableConstants_.codingSchemeNameOrId + " = ? AND " + tableConstants_.entityCodeOrId + " = ?");
+        PreparedStatement checkForCode = _sqlConnection.prepareStatement("SELECT count(*) as found from "
+                + _tableConstants.getTableName(SQLTableConstants.ENTITY) + " WHERE "
+                + _tableConstants.codingSchemeNameOrId + " = ? AND " + _tableConstants.entityCodeOrId + " = ?");
 
-        PreparedStatement checkForDefinition = sqlConnection_.prepareStatement("SELECT count(*) as found from "
-                + tableConstants_.getTableName(SQLTableConstants.ENTITY_PROPERTY) + " WHERE "
-                + tableConstants_.codingSchemeNameOrId + " = ? AND " + tableConstants_.entityCodeOrEntityId
-                + " = ? AND " + tableConstants_.propertyOrPropertyName + " = ?");
+        PreparedStatement checkForDefinition = _sqlConnection.prepareStatement("SELECT count(*) as found from "
+                + _tableConstants.getTableName(SQLTableConstants.ENTITY_PROPERTY) + " WHERE "
+                + _tableConstants.codingSchemeNameOrId + " = ? AND " + _tableConstants.entityCodeOrEntityId
+                + " = ? AND " + _tableConstants.propertyOrPropertyName + " = ?");
         
         // mct
-        PreparedStatement insertIntoEntityType = sqlConnection_.prepareStatement(tableConstants_
+        PreparedStatement insertIntoEntityType = _sqlConnection.prepareStatement(_tableConstants
                 .getInsertStatementSQL(SQLTableConstants.ENTITY_TYPE));
 
 
-        messages_.info("ICD10ToLex: loadConcepts: Loading coded entry and concept property");
+        _messages.info("ICDGEMToLex: loadConcepts: Loading coded entry and concept property");
 
-        BaseConcept[] concepts = codingScheme.concepts;
+        ArrayList<BaseConcept> concepts = codingScheme.getConcepts();
+        BaseConcept concept = null;
 
-        for (int i = 0; i < concepts.length; i++) {
+        for (int i = 0; i < concepts.size(); i++) {
             try {
-                checkForCode.setString(1, codingScheme.codingSchemeName);
-                checkForCode.setString(2, concepts[i].getCode());
+            	concept = concepts.get(i);
+                checkForCode.setString(1, codingScheme.getCsName());
+                checkForCode.setString(2, concepts.get(i).getCode());
                 ResultSet results = checkForCode.executeQuery();
                 // only one result
                 results.next();
                 if (results.getInt("found") == 0) {
-                    if (concepts[i].getName() == null || concepts[i].getName().length() == 0) {
-                        messages_.fatalAndThrowException("ICD10ToLex: loadConcepts: FATAL ERROR - The concept '" + concepts[i].getCode()
+                    if (concept.getCode() == null || concept.getCode().length() == 0) {
+                        _messages.fatalAndThrowException("ICDGEMToLex: loadConcepts: FATAL ERROR - The concept '" + concept.getCode()
                                 + "' is missing the name.  Name is required.");
                     }
                     // only add it to the codedEntry table if it is not already
@@ -435,14 +538,14 @@ public class ICDGEMToLex {
                     entityDescription
                     */
                     int k = 1;
-                    insert.setString(k++, codingScheme.codingSchemeName); // codingSchemeName
-                    insert.setString(k++, codingScheme.codingSchemeName); // entityCodeNamespace
-                    insert.setString(k++, concepts[i].getCode()); // entityCode
+                    insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
+                    insert.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
+                    insert.setString(k++, concept.getCode()); // entityCode
                     DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isDefined
                     DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("false"), false); // isAnonymous
                     DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isActive
                     insert.setLong(k++, i); // entryStateId
-                    insert.setString(k++, concepts[i].getDescription()); // entityDescription
+                    insert.setString(k++, concept.getCode()); // entityDescription
                     insert.executeUpdate();
                     
                     
@@ -451,9 +554,9 @@ public class ICDGEMToLex {
                     //        + TBLCOL_CODINGSCHEMENAME + ", " + TBLCOL_ENTITYCODENAMESPACE + ", " + TBLCOL_ENTITYCODE + ", "
                     //        + TBLCOL_ENTITYTYPE + ") VALUES (?,?,?,?)");
                     k = 1;
-                    insertIntoEntityType.setString(k++, codingScheme.codingSchemeName); // codingSchemeName
-                    insertIntoEntityType.setString(k++, codingScheme.codingSchemeName); // entityCodeNamespace
-                    insertIntoEntityType.setString(k++, concepts[i].getCode()); // entityCode
+                    insertIntoEntityType.setString(k++, codingScheme.getCsName()); // codingSchemeName
+                    insertIntoEntityType.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
+                    insertIntoEntityType.setString(k++, concept.getCode()); // entityCode
                     insertIntoEntityType.setString(k++, SQLTableConstants.ENTITYTYPE_CONCEPT); // entityType
                     insertIntoEntityType.executeUpdate();
                     
@@ -479,13 +582,13 @@ public class ICDGEMToLex {
                     */
 
                     k = 1;
-                    insertIntoConceptProperty.setString(k++, codingScheme.codingSchemeName); // codingSchemeName
-                    insertIntoConceptProperty.setString(k++, codingScheme.codingSchemeName); // entityCodeNamespace
-                    insertIntoConceptProperty.setString(k++, concepts[i].getCode()); // entityCode
+                    insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // codingSchemeName
+                    insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
+                    insertIntoConceptProperty.setString(k++, concept.getCode()); // entityCode
                     insertIntoConceptProperty.setString(k++, "p-1"); // propertyId
                     insertIntoConceptProperty.setString(k++, SQLTableConstants.TBLCOLVAL_PRESENTATION); // propertyType
                     insertIntoConceptProperty.setString(k++, SQLTableConstants.TBLCOLVAL_TEXTUALPRESENTATION); // propertyName
-                    insertIntoConceptProperty.setString(k++, codingScheme.defaultLanguage); // language
+                    insertIntoConceptProperty.setString(k++, codingScheme.getDefaultLanguage()); // language
                     insertIntoConceptProperty.setString(k++, ""); // format
                     DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isPreferred
                     insertIntoConceptProperty.setString(k++, ""); // degreeOfFidelity
@@ -493,23 +596,23 @@ public class ICDGEMToLex {
                     insertIntoConceptProperty.setString(k++, ""); // representationalForm
                     DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isActive
                     insertIntoConceptProperty.setLong(k++, i);  // entryStateId
-                    insertIntoConceptProperty.setString(k++, concepts[i].getDescription()); // propertyValue
+                    insertIntoConceptProperty.setString(k++, concept.getCode()); // propertyValue
                     insertIntoConceptProperty.executeUpdate();
                 }
 
-                if (concepts[i].getDescription() != null && concepts[i].getDescription().length() > 0) {
+                if (concept.getCode() != null && concept.getCode().length() > 0) {
                     // description to definition
                     // check for match first
-                    checkForDefinition.setString(1, codingScheme.codingSchemeName);
-                    checkForDefinition.setString(2, concepts[i].getCode());
+                    checkForDefinition.setString(1, codingScheme.getCsName());
+                    checkForDefinition.setString(2, concept.getCode());
                     checkForDefinition.setString(3, SQLTableConstants.TBLCOLVAL_DEFINITION);
 
                     results = checkForDefinition.executeQuery();
                     // always one result
                     results.next();
                     if (results.getInt("found") > 0) {
-                        messages_.info("ICD10ToLex: loadConcepts: WARNING - The concept code: '" + concepts[i].getCode() + "' name: '"
-                                + concepts[i].getName() + "' has multiple descriptions.  Skipping later descriptions.");
+                        _messages.info("ICDGEMToLex: loadConcepts: WARNING - The concept code: '" + concept.getCode() + "' name: '"
+                                + concept.getCode() + "' has multiple descriptions.  Skipping later descriptions.");
                     } else {
                         /*
                         codingSchemeName, 
@@ -530,13 +633,13 @@ public class ICDGEMToLex {
                         */
 
                         int k = 1;
-                        insertIntoConceptProperty.setString(k++, codingScheme.codingSchemeName); // codingSchemeName
-                        insertIntoConceptProperty.setString(k++, codingScheme.codingSchemeName); // entityCodeNamespace
-                        insertIntoConceptProperty.setString(k++, concepts[i].getCode()); // entityCode
+                        insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // codingSchemeName
+                        insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
+                        insertIntoConceptProperty.setString(k++, concept.getCode()); // entityCode
                         insertIntoConceptProperty.setString(k++, "d-1"); // propertyId
                         insertIntoConceptProperty.setString(k++, SQLTableConstants.TBLCOLVAL_DEFINITION); // propertyType
                         insertIntoConceptProperty.setString(k++, SQLTableConstants.TBLCOLVAL_DEFINITION); // propertyName
-                        insertIntoConceptProperty.setString(k++, codingScheme.defaultLanguage); // language
+                        insertIntoConceptProperty.setString(k++, codingScheme.getDefaultLanguage()); // language
                         insertIntoConceptProperty.setString(k++, ""); // format
                         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, null, false); // isPreferred
                         insertIntoConceptProperty.setString(k++, ""); // degreeOfFidelity
@@ -544,16 +647,16 @@ public class ICDGEMToLex {
                         insertIntoConceptProperty.setString(k++, ""); // representationalForm
                         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isActive
                         insertIntoConceptProperty.setLong(k++, i); // entryStateId
-                        insertIntoConceptProperty.setString(k++, concepts[i].getDescription()); // propertyValue
+                        insertIntoConceptProperty.setString(k++, concept.getCode()); // propertyValue
                         insertIntoConceptProperty.executeUpdate();
                     }
                 }
                 if (i % 10 == 0) {
-                    messages_.busy();
+                    _messages.busy();
                 }
                 results.close();
             } catch (Exception e) {
-                messages_.fatalAndThrowException("ICD10ToLex: loadConcepts: Problem loading concept code " + concepts[i], e);
+                _messages.fatalAndThrowException("ICDGEMToLex: loadConcepts: Problem loading concept code " + concept, e);
             }
         }
 
@@ -568,16 +671,17 @@ public class ICDGEMToLex {
         entryStateId, 
         entityDescription
         */
+        RootConcept specialConcept = new RootConcept(_props);
 
         int k = 1;
-        insert.setString(k++, codingScheme.codingSchemeName); // codingSchemeName
-        insert.setString(k++, codingScheme.codingSchemeName); // entityCodeNamespace
+        insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
+        insert.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
         insert.setString(k++, specialConcept.getCode()); // entityCode
         DBUtility.setBooleanOnPreparedStatment(insert, k++, null); // isDefined
         DBUtility.setBooleanOnPreparedStatment(insert, k++, null); // isAnonymous
         DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isActive
         insert.setLong(k++, 0); // entryStateId
-        insert.setString(k++, specialConcept.getName()); // entityDescription
+        insert.setString(k++, specialConcept.getCode()); // entityDescription
         insert.executeUpdate();
         
         /*
@@ -598,13 +702,13 @@ public class ICDGEMToLex {
         propertyValue
         */
         k = 1;
-        insertIntoConceptProperty.setString(k++, codingScheme.codingSchemeName); // codingSchemeName
-        insertIntoConceptProperty.setString(k++, codingScheme.codingSchemeName); // entityCodeNamespace
+        insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // codingSchemeName
+        insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
         insertIntoConceptProperty.setString(k++, specialConcept.getCode()); // entityCode
         insertIntoConceptProperty.setString(k++, "p-1"); // propertyId
         insertIntoConceptProperty.setString(k++, SQLTableConstants.TBLCOLVAL_PRESENTATION); // propertyType
         insertIntoConceptProperty.setString(k++, SQLTableConstants.TBLCOLVAL_TEXTUALPRESENTATION); // propertyName
-        insertIntoConceptProperty.setString(k++, codingScheme.defaultLanguage); // language
+        insertIntoConceptProperty.setString(k++, codingScheme.getDefaultLanguage()); // language
         insertIntoConceptProperty.setString(k++, ""); // format
         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isPreferred
         insertIntoConceptProperty.setString(k++, ""); // degreeOfFidelity
@@ -612,7 +716,7 @@ public class ICDGEMToLex {
         insertIntoConceptProperty.setString(k++, ""); // representationalForm
         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isActive
         insertIntoConceptProperty.setLong(k++, 0); // entryStateId
-        insertIntoConceptProperty.setString(k++, specialConcept.getName()); // propertyValue
+        insertIntoConceptProperty.setString(k++, specialConcept.getCode()); // propertyValue
 
         insertIntoConceptProperty.executeUpdate();
         
@@ -621,8 +725,8 @@ public class ICDGEMToLex {
         //        + TBLCOL_CODINGSCHEMENAME + ", " + TBLCOL_ENTITYCODENAMESPACE + ", " + TBLCOL_ENTITYCODE + ", "
         //        + TBLCOL_ENTITYTYPE + ") VALUES (?,?,?,?)");
         k = 1;
-        insertIntoEntityType.setString(k++, codingScheme.codingSchemeName); // codingSchemeName
-        insertIntoEntityType.setString(k++, codingScheme.codingSchemeName); // entityCodeNamespace
+        insertIntoEntityType.setString(k++, codingScheme.getCsName()); // codingSchemeName
+        insertIntoEntityType.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
         insertIntoEntityType.setString(k++, specialConcept.getCode()); // entityCode
         insertIntoEntityType.setString(k++, SQLTableConstants.ENTITYTYPE_CONCEPT); // entityType
         insertIntoEntityType.executeUpdate();
@@ -646,13 +750,13 @@ public class ICDGEMToLex {
         propertyValue
         */
         k = 1;
-        insertIntoConceptProperty.setString(k++, codingScheme.codingSchemeName); // codingSchemeName
-        insertIntoConceptProperty.setString(k++, codingScheme.codingSchemeName); // entityCodeNamespace
+        insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // codingSchemeName
+        insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
         insertIntoConceptProperty.setString(k++, specialConcept.getCode()); // entityCode
         insertIntoConceptProperty.setString(k++, "d-1"); // propertyId
         insertIntoConceptProperty.setString(k++, SQLTableConstants.TBLCOLVAL_DEFINITION); // propertyType
         insertIntoConceptProperty.setString(k++, SQLTableConstants.TBLCOLVAL_DEFINITION); // propertyName
-        insertIntoConceptProperty.setString(k++, codingScheme.defaultLanguage); // language
+        insertIntoConceptProperty.setString(k++, codingScheme.getDefaultLanguage()); // language
         insertIntoConceptProperty.setString(k++, ""); // format
         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("false"), false); // isPreferred
         insertIntoConceptProperty.setString(k++, ""); // degreeOfFidelity
@@ -660,7 +764,7 @@ public class ICDGEMToLex {
         insertIntoConceptProperty.setString(k++, ""); // representationalForm
         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isActive
         insertIntoConceptProperty.setLong(k++, 0); // entryStateId        
-        insertIntoConceptProperty.setString(k++, specialConcept.getDescription()); // propertyValue
+        insertIntoConceptProperty.setString(k++, specialConcept.getCode()); // propertyValue
         
         insertIntoConceptProperty.executeUpdate();
 
@@ -672,39 +776,35 @@ public class ICDGEMToLex {
     }
 
     private void loadHasSubtypeRelations(CodingScheme codingScheme) throws Exception {
-        messages_.info("ICD10ToLex: loadHasSubtypeRelations: Loading relationships");
-        PreparedStatement insertIntoConceptAssociations = sqlConnection_.prepareStatement(tableConstants_
+        _messages.info("ICDGEMToLex: loadHasSubtypeRelations: Loading relationships");
+        PreparedStatement insertIntoConceptAssociations = _sqlConnection.prepareStatement(_tableConstants
                 .getInsertStatementSQL(SQLTableConstants.ENTITY_ASSOCIATION_TO_ENTITY));
 
-        PreparedStatement checkForAssociation = sqlConnection_.prepareStatement("SELECT count(*) as found from "
-                + tableConstants_.getTableName(SQLTableConstants.ENTITY_ASSOCIATION_TO_ENTITY) + " WHERE "
-                + tableConstants_.codingSchemeNameOrId + " = ? AND " + tableConstants_.containerNameOrContainerDC
-                + " = ? AND " + tableConstants_.entityCodeOrAssociationId + " = ? AND "
-                + tableConstants_.sourceCSIdOrEntityCodeNS + " = ? AND " + tableConstants_.sourceEntityCodeOrId
-                + " = ? AND " + tableConstants_.targetCSIdOrEntityCodeNS + " = ? AND "
-                + tableConstants_.targetEntityCodeOrId + " = ?");
+        PreparedStatement checkForAssociation = _sqlConnection.prepareStatement("SELECT count(*) as found from "
+                + _tableConstants.getTableName(SQLTableConstants.ENTITY_ASSOCIATION_TO_ENTITY) + " WHERE "
+                + _tableConstants.codingSchemeNameOrId + " = ? AND " + _tableConstants.containerNameOrContainerDC
+                + " = ? AND " + _tableConstants.entityCodeOrAssociationId + " = ? AND "
+                + _tableConstants.sourceCSIdOrEntityCodeNS + " = ? AND " + _tableConstants.sourceEntityCodeOrId
+                + " = ? AND " + _tableConstants.targetCSIdOrEntityCodeNS + " = ? AND "
+                + _tableConstants.targetEntityCodeOrId + " = ?");
 
-        Concept[] concepts = codingScheme.concepts;
-
-        for (int i = 0; i < concepts.length; i++) {
+        ArrayList<Association> hasSubTypeAsso = codingScheme.getHasSubTypeAssociations();
+        Association asso = null;
+        for (int i = 0; i < hasSubTypeAsso.size(); i++) {
             try {
-                Concept parent = TextUtility.getParent(concepts, i);
-                if (parent == null) {
-                    parent = specialConcept;
-                }
-                checkForAssociation.setString(1, codingScheme.codingSchemeName);
+            	asso = hasSubTypeAsso.get(i);
+                checkForAssociation.setString(1, codingScheme.getCsName());
                 checkForAssociation.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS);
                 checkForAssociation.setString(3, SQLTableConstants.TBLCOLVAL_HASSUBTYPE_ASSOCIATION);
-                checkForAssociation.setString(4, codingScheme.codingSchemeName);
-                checkForAssociation.setString(5, parent.getCode());
-                checkForAssociation.setString(6, codingScheme.codingSchemeName);
-                checkForAssociation.setString(7, concepts[i].getCode());
+                checkForAssociation.setString(4, codingScheme.getCsName());
+                checkForAssociation.setString(5, asso.getSourceCode());
+                checkForAssociation.setString(6, codingScheme.getCsName());
+                checkForAssociation.setString(7, asso.getTargetCode());
                 ResultSet results = checkForAssociation.executeQuery();
                 // always one result
                 results.next();
                 if (results.getInt("found") > 0) {
-                    messages_.info("ICD10ToLex: loadHasSubtypeRelations: WARNING - Relationship '" + parent.getCode() + "' (" + parent.getName() + ") to '"
-                            + concepts[i].getCode() + "' (" + concepts[i].getName() + ") already exists.  Skipping.");
+                    _messages.info("ICDGEMToLex: loadHasSubtypeRelations: WARNING - Relationship (" + asso.getSourceCode() + ") -- (" + asso.getTargetCode() + ") already exists.  Skipping.");
                     continue;
                 }
                 /*
@@ -723,14 +823,14 @@ public class ICDGEMToLex {
                 isActive, 
                 entryStateId
                 */
-                insertIntoConceptAssociations.setString(1, codingScheme.codingSchemeName); // codingSchemeName
+                insertIntoConceptAssociations.setString(1, codingScheme.getCsName()); // codingSchemeName
                 insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
-                insertIntoConceptAssociations.setString(3, codingScheme.codingSchemeName); // entityCodeNamespace
+                insertIntoConceptAssociations.setString(3, codingScheme.getCsName()); // entityCodeNamespace
                 insertIntoConceptAssociations.setString(4, SQLTableConstants.TBLCOLVAL_HASSUBTYPE_ASSOCIATION); // entityCode
-                insertIntoConceptAssociations.setString(5, codingScheme.codingSchemeName); // sourceEntityCodeNamespace
-                insertIntoConceptAssociations.setString(6, parent.getCode()); // sourceEntityCode
-                insertIntoConceptAssociations.setString(7, codingScheme.codingSchemeName); // targetEntityCodeNamespace
-                insertIntoConceptAssociations.setString(8, concepts[i].getCode()); // targetEntityCode
+                insertIntoConceptAssociations.setString(5, codingScheme.getCsName()); // sourceEntityCodeNamespace
+                insertIntoConceptAssociations.setString(6, asso.getSourceCode()); // sourceEntityCode
+                insertIntoConceptAssociations.setString(7, codingScheme.getCsName()); // targetEntityCodeNamespace
+                insertIntoConceptAssociations.setString(8, asso.getTargetCode()); // targetEntityCode
                 insertIntoConceptAssociations.setString(9, null); // multiAttributesKey
                 insertIntoConceptAssociations.setString(10, null); // associationInstanceId 
                 DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 11, false, false); // isDefining
@@ -740,11 +840,11 @@ public class ICDGEMToLex {
                 
                 insertIntoConceptAssociations.executeUpdate();
                 if (i % 10 == 0) {
-                    messages_.busy();
+                    _messages.busy();
                 }
                 results.close();
             } catch (SQLException e) {
-                messages_.fatalAndThrowException("ICD10ToLex: loadHasSubtypeRelations: Problem loading relationships for " + concepts[i], e);
+                _messages.fatalAndThrowException("ICDGEMToLex: loadHasSubtypeRelations: Problem loading relationships for " + asso.toString(), e);
             }
         }
 
@@ -752,51 +852,239 @@ public class ICDGEMToLex {
         checkForAssociation.close();
 
     }
-
-    private void loadRelations(CodingScheme codingScheme) throws Exception {
-        TreeSet relationNameSet = new TreeSet();
-        messages_.info("ICD10ToLex: loadRelations: Loading relationships");
-        PreparedStatement insertIntoConceptAssociations = sqlConnection_.prepareStatement(tableConstants_
+    
+    private void loadMapsToRelations(CodingScheme codingScheme) throws Exception {
+        _messages.info("ICDGEMToLex: loadMapsToRelations: Loading relationships");
+        PreparedStatement insertIntoConceptAssociations = _sqlConnection.prepareStatement(_tableConstants
                 .getInsertStatementSQL(SQLTableConstants.ENTITY_ASSOCIATION_TO_ENTITY));
 
-        PreparedStatement insert = sqlConnection_.prepareStatement(tableConstants_
-                .getInsertStatementSQL(SQLTableConstants.ASSOCIATION));
-        Association[] associations = codingScheme.associations;
+        PreparedStatement checkForAssociation = _sqlConnection.prepareStatement("SELECT count(*) as found from "
+                + _tableConstants.getTableName(SQLTableConstants.ENTITY_ASSOCIATION_TO_ENTITY) + " WHERE "
+                + _tableConstants.codingSchemeNameOrId + " = ? AND " + _tableConstants.containerNameOrContainerDC
+                + " = ? AND " + _tableConstants.entityCodeOrAssociationId + " = ? AND "
+                + _tableConstants.sourceCSIdOrEntityCodeNS + " = ? AND " + _tableConstants.sourceEntityCodeOrId
+                + " = ? AND " + _tableConstants.targetCSIdOrEntityCodeNS + " = ? AND "
+                + _tableConstants.targetEntityCodeOrId + " = ?");
 
-        for (int i = 0; i < associations.length; i++) {
+        ArrayList<Association> mapsToAssociations = codingScheme.getMapsToAssociations();
+        Association asso = null;
+        for (int i = 0; i < mapsToAssociations.size(); i++) {
             try {
-                relationNameSet.add(associations[i].getRelationName());
-                insertIntoConceptAssociations.setString(1, codingScheme.codingSchemeName);
-                insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS);
-                insertIntoConceptAssociations.setString(3, associations[i].getRelationName());
-                insertIntoConceptAssociations.setString(4, associations[i].getSourceCodingScheme());
-                insertIntoConceptAssociations.setString(5, SQLTableConstants.ENTITYTYPE_CONCEPT);
-                insertIntoConceptAssociations.setString(6, associations[i].getSourceCode());
-                insertIntoConceptAssociations.setString(7, associations[i].getTargetCodingScheme());
-                insertIntoConceptAssociations.setString(8, SQLTableConstants.ENTITYTYPE_CONCEPT);
-                insertIntoConceptAssociations.setString(9, associations[i].getTargetCode());
-                insertIntoConceptAssociations.setString(10, null);
-                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 9, null, false);
-                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 10, null, false);
-                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 11, null, false);
-
+            	asso = mapsToAssociations.get(i);
+                checkForAssociation.setString(1, codingScheme.getCsName());
+                checkForAssociation.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS);
+                checkForAssociation.setString(3, ICDGEMConstants.ASSOCIATION_HAS_SUBTYPE);
+                checkForAssociation.setString(4, codingScheme.getCsName());
+                checkForAssociation.setString(5, asso.getSourceCode());
+                checkForAssociation.setString(6, codingScheme.getCsName());
+                checkForAssociation.setString(7, asso.getTargetCode());
+                ResultSet results = checkForAssociation.executeQuery();
+                // always one result
+                results.next();
+                if (results.getInt("found") > 0) {
+                    _messages.info("ICDGEMToLex: loadMapsToRelations: WARNING - Relationship (" + asso.getSourceCode() + ") -- (" + asso.getTargetCode() + ") already exists.  Skipping.");
+                    continue;
+                }
+                /*
+                codingSchemeName, 
+                containerName, 
+                entityCodeNamespace, 
+                entityCode, 
+                sourceEntityCodeNamespace, 
+                sourceEntityCode, 
+                targetEntityCodeNamespace, 
+                targetEntityCode, 
+                multiAttributesKey, 
+                associationInstanceId, 
+                isDefining, 
+                isInferred, 
+                isActive, 
+                entryStateId
+                */
+                insertIntoConceptAssociations.setString(1, codingScheme.getCsName()); // codingSchemeName
+                insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
+                insertIntoConceptAssociations.setString(3, codingScheme.getCsName()); // entityCodeNamespace
+                insertIntoConceptAssociations.setString(4, ICDGEMConstants.ASSOCIATION_HAS_SUBTYPE); // entityCode
+                insertIntoConceptAssociations.setString(5, codingScheme.getCsName()); // sourceEntityCodeNamespace
+                insertIntoConceptAssociations.setString(6, asso.getSourceCode()); // sourceEntityCode
+                insertIntoConceptAssociations.setString(7, codingScheme.getCsName()); // targetEntityCodeNamespace
+                insertIntoConceptAssociations.setString(8, asso.getTargetCode()); // targetEntityCode
+                insertIntoConceptAssociations.setString(9, null); // multiAttributesKey
+                insertIntoConceptAssociations.setString(10, null); // associationInstanceId 
+                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 11, false, false); // isDefining
+                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 12, false, false); // isInferred
+                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 13, true, false); // isActive
+                insertIntoConceptAssociations.setLong(14, i); // entryStateId                
+                
                 insertIntoConceptAssociations.executeUpdate();
                 if (i % 10 == 0) {
-                    messages_.busy();
+                    _messages.busy();
                 }
-
+                results.close();
             } catch (SQLException e) {
-                messages_.fatalAndThrowException("ICD10ToLex: loadRelations: Problem loading relationships for " + associations[i], e);
+                _messages.fatalAndThrowException("ICDGEMToLex: loadMapsToRelations: Problem loading relationships for " + asso.toString(), e);
             }
         }
 
-        for (Iterator i = relationNameSet.iterator(); i.hasNext();) {
-            messages_.info("ICD10ToLex: loadRelations: Loading coding scheme supported attributes");
-            insert = sqlConnection_.prepareStatement(tableConstants_
+        insertIntoConceptAssociations.close();
+        checkForAssociation.close();
+
+    }
+    
+    private void loadContainsRelations(CodingScheme codingScheme) throws Exception {
+        _messages.info("ICDGEMToLex: loadContainsRelations: Loading relationships");
+        PreparedStatement insertIntoConceptAssociations = _sqlConnection.prepareStatement(_tableConstants
+                .getInsertStatementSQL(SQLTableConstants.ENTITY_ASSOCIATION_TO_ENTITY));
+
+        PreparedStatement checkForAssociation = _sqlConnection.prepareStatement("SELECT count(*) as found from "
+                + _tableConstants.getTableName(SQLTableConstants.ENTITY_ASSOCIATION_TO_ENTITY) + " WHERE "
+                + _tableConstants.codingSchemeNameOrId + " = ? AND " + _tableConstants.containerNameOrContainerDC
+                + " = ? AND " + _tableConstants.entityCodeOrAssociationId + " = ? AND "
+                + _tableConstants.sourceCSIdOrEntityCodeNS + " = ? AND " + _tableConstants.sourceEntityCodeOrId
+                + " = ? AND " + _tableConstants.targetCSIdOrEntityCodeNS + " = ? AND "
+                + _tableConstants.targetEntityCodeOrId + " = ?");
+
+        ArrayList<Association> containsAsso = codingScheme.getHasSubTypeAssociations();
+        Association asso = null;
+        for (int i = 0; i < containsAsso.size(); i++) {
+            try {
+            	asso = containsAsso.get(i);
+                checkForAssociation.setString(1, codingScheme.getCsName());
+                checkForAssociation.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS);
+                checkForAssociation.setString(3, ICDGEMConstants.ASSOCIATION_CONTAINS);
+                checkForAssociation.setString(4, codingScheme.getCsName());
+                checkForAssociation.setString(5, asso.getSourceCode());
+                checkForAssociation.setString(6, codingScheme.getCsName());
+                checkForAssociation.setString(7, asso.getTargetCode());
+                ResultSet results = checkForAssociation.executeQuery();
+                // always one result
+                results.next();
+                if (results.getInt("found") > 0) {
+                    _messages.info("ICDGEMToLex: loadContainsRelations: WARNING - Relationship (" + asso.getSourceCode() + ") -- (" + asso.getTargetCode() + ") already exists.  Skipping.");
+                    continue;
+                }
+                /*
+                codingSchemeName, 
+                containerName, 
+                entityCodeNamespace, 
+                entityCode, 
+                sourceEntityCodeNamespace, 
+                sourceEntityCode, 
+                targetEntityCodeNamespace, 
+                targetEntityCode, 
+                multiAttributesKey, 
+                associationInstanceId, 
+                isDefining, 
+                isInferred, 
+                isActive, 
+                entryStateId
+                */
+                insertIntoConceptAssociations.setString(1, codingScheme.getCsName()); // codingSchemeName
+                insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
+                insertIntoConceptAssociations.setString(3, codingScheme.getCsName()); // entityCodeNamespace
+                insertIntoConceptAssociations.setString(4, ICDGEMConstants.ASSOCIATION_CONTAINS); // entityCode
+                insertIntoConceptAssociations.setString(5, codingScheme.getCsName()); // sourceEntityCodeNamespace
+                insertIntoConceptAssociations.setString(6, asso.getSourceCode()); // sourceEntityCode
+                insertIntoConceptAssociations.setString(7, codingScheme.getCsName()); // targetEntityCodeNamespace
+                insertIntoConceptAssociations.setString(8, asso.getTargetCode()); // targetEntityCode
+                insertIntoConceptAssociations.setString(9, null); // multiAttributesKey
+                insertIntoConceptAssociations.setString(10, null); // associationInstanceId 
+                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 11, false, false); // isDefining
+                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 12, false, false); // isInferred
+                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 13, true, false); // isActive
+                insertIntoConceptAssociations.setLong(14, i); // entryStateId                
+                
+                insertIntoConceptAssociations.executeUpdate();
+                if (i % 10 == 0) {
+                    _messages.busy();
+                }
+                results.close();
+            } catch (SQLException e) {
+                _messages.fatalAndThrowException("ICDGEMToLex: loadContainsRelations: Problem loading relationships for " + asso.toString(), e);
+            }
+        }
+
+        insertIntoConceptAssociations.close();
+        checkForAssociation.close();
+
+    }
+    
+
+
+    private void loadRelations(CodingScheme codingScheme, ArrayList<Association> associations) throws Exception {
+        TreeSet<String> relationNameSet = new TreeSet<String>();
+        _messages.info("ICDGEMToLex: loadRelations: Loading relationships");
+        PreparedStatement insertIntoConceptAssociations = _sqlConnection.prepareStatement(_tableConstants
+                .getInsertStatementSQL(SQLTableConstants.ENTITY_ASSOCIATION_TO_ENTITY));
+
+        PreparedStatement insert = _sqlConnection.prepareStatement(_tableConstants
+                .getInsertStatementSQL(SQLTableConstants.ASSOCIATION));
+        Association association = null;
+
+        for (int i = 0; i < associations.size(); i++) {
+            try {
+            	association = associations.get(i);
+                relationNameSet.add(association.getRelationName());
+                /*
+                 * 1  codingSchemeName
+                 * 2  containerName
+                 * 3  entityCodeNamespace
+                 * 4  entityCode
+                 * 5  sourceEntityCodeNamespace
+                 * 6  sourceEntityCode
+                 * 7  targetEntityCodeNamespace
+                 * 8  targetEntityCode
+                 * 9  multiAttributesKey
+                 * 10 associationInstanceId
+                 * 11 isDefining
+                 * 12 isInferred
+                 * 13 isActive
+                 * 14 entryStateId
+                 */
+                insertIntoConceptAssociations.setString(1, codingScheme.getCsName()); // codingSchemeName
+                insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
+                insertIntoConceptAssociations.setString(3, codingScheme.getCsId()); // entityCodeNamespace
+                insertIntoConceptAssociations.setString(4, association.getRelationName()); // entityCode
+                insertIntoConceptAssociations.setString(5, association.getSourceCodingScheme()); // sourceEntityCodeNamespace
+                insertIntoConceptAssociations.setString(6, association.getSourceCode()); // sourceEntityCode
+                insertIntoConceptAssociations.setString(7, association.getTargetCodingScheme()); // targetEntityCodeNamespace
+                insertIntoConceptAssociations.setString(8, association.getTargetCode()); // targetEntityCode
+                insertIntoConceptAssociations.setString(9, null); // multiAttributesKey
+                insertIntoConceptAssociations.setString(10, null); // associationInstanceId
+                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 11, null, false); // isDefining
+                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 12, null, false); // isInferred
+                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 13, null, false); // isActive
+                insertIntoConceptAssociations.setLong(14, i); // entryStateId
+
+                insertIntoConceptAssociations.executeUpdate();
+                if (i % 10 == 0) {
+                    _messages.busy();
+                }
+
+            } catch (SQLException e) {
+                _messages.fatalAndThrowException("ICDGEMToLex: loadRelations: Problem loading relationships for " + association, e);
+            }
+        }
+
+        for (Iterator<String> i = relationNameSet.iterator(); i.hasNext();) {
+            _messages.info("ICDGEMToLex: loadRelations: Loading coding scheme supported attributes");
+            insert = _sqlConnection.prepareStatement(_tableConstants
                     .getInsertStatementSQL(SQLTableConstants.CODING_SCHEME_SUPPORTED_ATTRIBUTES));
 
             String rel_name = i.next().toString();
-            insert.setString(1, codingScheme.codingSchemeName);
+            
+            /*
+             * INSERT INTO codingSchemeSupportedAttrib (codingSchemeName, supportedAttributeTag, id, uri, idValue, val1, val2) VALUES ('ICD-10-to-9-CM-GEM','Association','mapsTo','','','','')"
+             * codingSchemeName
+             * supportedAttributeTag
+             * id
+             * uri
+             * idValue
+             * val1
+             * val2
+             */
+            
+            insert.setString(1, codingScheme.getCsName());
             insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_ASSOCIATION);
             insert.setString(3, rel_name);
             insert.setString(4, "");
@@ -807,14 +1095,47 @@ public class ICDGEMToLex {
             try {
                 insert.executeUpdate();
             } catch (SQLException ex) {
-                messages_.fatalAndThrowException("ICD10ToLex: loadRelations: Problem loading supportedAssociation for " + rel_name, ex);
+                _messages.fatalAndThrowException("ICDGEMToLex: loadRelations: Problem loading supportedAssociation for " + rel_name, ex);
             }
 
-            insert = sqlConnection_.prepareStatement(tableConstants_
+            /*
+             * codingSchemeName
+             * containerName
+             * entityCodeNamespace
+             * entityCode
+             * associationName
+             * forwardName
+             * reverseName
+             * inverseId
+             * isNavigable
+             * isTransitive
+             * isAntiTransitive
+             * isSymmetric
+             * isAntiSymmetric
+             * isReflexive
+             * isAntiReflexive
+             * isFunctional
+             * isReverseFunctional
+             * entityDescription
+             */
+            insert = _sqlConnection.prepareStatement(_tableConstants
                     .getInsertStatementSQL(SQLTableConstants.ASSOCIATION));
-            insert.setString(1, codingScheme.codingSchemeName);
-            insert.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS);
-            insert.setString(3, rel_name);
+            insert.setString(1, codingScheme.getCsName()); // codingSchemeName
+            insert.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
+            // entityCodeNamespace
+            // entityCode
+            // sourceEntityCodeNamespace
+            // sourceEntityCode
+            // targetEntityCodeNamespace
+            // targetEntityCode
+            // multiAttributesKey
+            // associationInstanceId
+            // isDefining
+            // isInferred
+            // isActive
+            // isActive
+            // entryStateId
+            insert.setString(3, rel_name);  
             insert.setString(4, rel_name);
             insert.setString(5, "");
             insert.setString(6, "");
@@ -836,7 +1157,7 @@ public class ICDGEMToLex {
             try {
                 insert.executeUpdate();
             } catch (SQLException ex) {
-                messages_.fatalAndThrowException("ICD10ToLex: loadRelations: Problem loading Association for " + rel_name, ex);
+                _messages.fatalAndThrowException("ICDGEMToLex: loadRelations: Problem loading Association for " + rel_name, ex);
             }
 
         }

@@ -68,14 +68,11 @@ public class GEMConversionLauncher {
             
             ICDGEMToLex icd10ToLex = new ICDGEMToLex(
             		in.getFileLocation(),
-            		"|",
             		out.getServer(),
             		out.getDriver(),
             		out.getUsername(),
             		out.getPassword(),
             		out.getTablePrefix(),
-            		null,
-            		md,
             		props );
 //            URNVersionPair[] rv = { new URNVersionPair(textToSQL.getCodingSchemeName(), textToSQL
 //                    .getVersion()) };            

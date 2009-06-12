@@ -58,7 +58,7 @@ public class ICDGEMTest extends TestCase {
     			"-type", "i10to9cm", "-ver", "JUnit", "-t", "JUnitTest" };
     	this.runIt(args);
     }
-    
+/*    
     public void testLoadICD9To10Cm() throws Exception {
     	String[] args = {"-in", "resources/testData/icdgem/small_2009_I9gem.txt",
     			"-type", "i9to10cm", "-ver", "JUnit", "-t", "JUnitTest" };
@@ -74,4 +74,5 @@ public class ICDGEMTest extends TestCase {
     			"-type", "i10to9pcs", "-ver", "JUnit", "-t", "JUnitTest" };
     	this.runIt(args);
     }
+*/    
 }

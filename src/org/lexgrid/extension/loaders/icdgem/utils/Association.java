@@ -59,6 +59,20 @@ public class Association {
         targetCode = parseValue(line, "targetCode");
 
     }
+    
+    public String toString() {
+    	StringBuffer buf = new StringBuffer();
+    	buf.append(relationName);
+    	buf.append(": ");
+    	buf.append(sourceCodingScheme);
+    	buf.append(" ");
+    	buf.append(sourceCode);
+    	buf.append(" ");
+    	buf.append(targetCodingScheme);
+    	buf.append(" ");
+    	buf.append(targetCode);
+    	return buf.toString();
+    }
 
     public String parseValue(String line, String name) {
         String value = null;
@@ -80,11 +94,6 @@ public class Association {
     public boolean isValid() {
         return (relationName != null && relationName.trim().length() != 0 && sourceCode != null
                 && sourceCode.trim().length() != 0 && targetCode != null && targetCode.trim().length() != 0);
-    }
-
-    public String toString() {
-        return "RelationName: " + relationName + "  Source: " + sourceCodingScheme + ":" + sourceCode + " Target: "
-                + targetCodingScheme + ":" + targetCode + "\n";
     }
 
     public String getRelationName() {

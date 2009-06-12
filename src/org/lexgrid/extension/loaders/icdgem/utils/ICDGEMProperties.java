@@ -158,7 +158,14 @@ public class ICDGEMProperties {
 		_csDescription = _gemProps.getProperty("descr");
 		_csLocalName = _gemProps.getProperty("localname");
 		_csSource = _gemProps.getProperty("source");
-		_csCopyright = _gemProps.getProperty("copyright");					
+		_csCopyright = _gemProps.getProperty("copyright");	
+	    _englishName = _gemProps.getProperty("english.name");
+	    _englishUri = _gemProps.getProperty("english.uri");
+	    _textualPresentationName = _gemProps.getProperty("text.plain.name");
+	    _textualPresentationUri = _gemProps.getProperty("text.plain.uri");
+	    _textPlainName = _gemProps.getProperty("textual.presentation.name");
+	    _textPlainUri = _gemProps.getProperty("textual.presentation.uri");
+		
     }
     
     public String getTextualPresentationName() {

@@ -144,16 +144,16 @@ public class GEMBaseLoader {
         messageDirector = new MessageDirector(getName(), loadStatus);
 
         // mcturk test 6/3/2009
-        String id2 = getLogger().error("GEMBaseLoader: baseLoad: testing early exit.");
-        throw new LBInvocationException("GEMBaseLoader: baseLoad: testing early exit.", id2);
+//        String id2 = getLogger().error("GEMBaseLoader: baseLoad: testing early exit.");
+        //throw new LBInvocationException("GEMBaseLoader: baseLoad: testing early exit.", id2);
 
 //  commented out for early testing - mcturk 6/3/2009        
-//        if (async) {
-//            Thread conversion = new Thread(new DoConversion(sci));
-//            conversion.start();
-//        } else {
-//            new DoConversion(sci).run();
-//        }
+        if (async) {
+            Thread conversion = new Thread(new DoConversion(sci));
+            conversion.start();
+        } else {
+            new DoConversion(sci).run();
+        }
     }
 
     /**
@@ -243,7 +243,7 @@ public class GEMBaseLoader {
                     // also, get a lock
                     // so no one else can start loading.
                 	loadedCodingSchemes = new URNVersionPair[1];
-                	loadedCodingSchemes[0] = new URNVersionPair(codingScheme.codingSchemeId, codingScheme.representsVersion);
+                	loadedCodingSchemes[0] = new URNVersionPair(codingScheme.getCsId(), codingScheme.getRepresentsVersion());
 
                     locks = isTerminologyAlreadyLoaded(loadedCodingSchemes, sci_, false);
                     if (locks == null) {
@@ -265,7 +265,7 @@ public class GEMBaseLoader {
 //                	codingSchemeNames[i] = loadedCodingSchemes[i].
 //                }
                 
-                String[] codingSchemeNames = {codingScheme.codingSchemeName};
+                String[] codingSchemeNames = {codingScheme.getCsName()};
 
                 // Recheck the version
                 if (loadStatus.getErrorsLogged() != null && !loadStatus.getErrorsLogged().booleanValue()) {
