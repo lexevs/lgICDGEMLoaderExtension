@@ -126,9 +126,9 @@ public class ICDGEMToLex {
         */
 
         insert.setString(ii++, codingScheme.getCsName()); // codingSchemeName
-        insert.setString(ii++, codingScheme.getCsId()); // codingSchemeURI
+        insert.setString(ii++, codingScheme.getCsUri()); // codingSchemeURI
         insert.setString(ii++, codingScheme.getRepresentsVersion()); // representsVersion
-        insert.setString(ii++, codingScheme.getFormalName()); // formalName
+        insert.setString(ii++, codingScheme.getCsName()); // formalName
         insert.setString(ii++, codingScheme.getDefaultLanguage()); // defaultLanguage
         insert.setInt(ii++, codingScheme.getConcepts().size()); // approxNumConcepts
         DBUtility.setBooleanOnPreparedStatment(insert, ii++, new Boolean(false)); // isActive
@@ -223,7 +223,7 @@ public class ICDGEMToLex {
             insert.setString(1, codingScheme.getCsName());
             insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_CODINGSCHEME);
             insert.setString(3, codingScheme.getCsName());
-            insert.setString(4, codingScheme.getCsId());
+            insert.setString(4, codingScheme.getCsUri());
             if (_tableConstants.supports2009Model()) {
                 insert.setString(5, codingScheme.getCsName());
                 insert.setString(6, SQLTableConstants.TBLCOLVAL_MISSING);
@@ -293,7 +293,7 @@ public class ICDGEMToLex {
 
             insert.executeUpdate();
 
-            String codingSchemeIdTemp = codingScheme.getCsId();
+            String codingSchemeIdTemp = codingScheme.getCsUri();
             int temp = codingSchemeIdTemp.lastIndexOf(':');
             if (temp > 0 && ((temp + 1) <= codingSchemeIdTemp.length())) {
                 codingSchemeIdTemp = codingSchemeIdTemp.substring(temp + 1);
@@ -368,7 +368,7 @@ public class ICDGEMToLex {
             // hasSubType/Isa
             insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
-            insert.setString(k++, codingScheme.getCsId()); // entityCodeNamespace
+            insert.setString(k++, codingScheme.getCsUri()); // entityCodeNamespace
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_ISA_ASSOCIATION); // entityCode
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_ISA_ASSOCIATION); // associationName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_ISA_ASSOCIATION); // forwardName
@@ -390,7 +390,7 @@ public class ICDGEMToLex {
             k = 1;
             insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
-            insert.setString(k++, codingScheme.getCsId()); // entityCodeNamespace
+            insert.setString(k++, codingScheme.getCsUri()); // entityCodeNamespace
             insert.setString(k++, ICDGEMConstants.ASSOCIATION_MAPS_TO); // entityCode
             insert.setString(k++, ICDGEMConstants.ASSOCIATION_MAPS_TO); // associationName
             insert.setString(k++, ICDGEMConstants.ASSOCIATION_MAPS_TO); // forwardName
@@ -1043,7 +1043,7 @@ public class ICDGEMToLex {
                  */
                 insertIntoConceptAssociations.setString(1, codingScheme.getCsName()); // codingSchemeName
                 insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
-                insertIntoConceptAssociations.setString(3, codingScheme.getCsId()); // entityCodeNamespace
+                insertIntoConceptAssociations.setString(3, codingScheme.getCsUri()); // entityCodeNamespace
                 insertIntoConceptAssociations.setString(4, association.getRelationName()); // entityCode
                 insertIntoConceptAssociations.setString(5, association.getSourceCodingScheme()); // sourceEntityCodeNamespace
                 insertIntoConceptAssociations.setString(6, association.getSourceCode()); // sourceEntityCode

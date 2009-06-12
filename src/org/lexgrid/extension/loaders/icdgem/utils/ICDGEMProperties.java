@@ -80,6 +80,8 @@ public class ICDGEMProperties {
     	if(icdGemVersion == null) {
         	SimpleDateFormat formatter = new SimpleDateFormat("yyyyMMddhhmmss");
         	_codingSchemeVersion = formatter.format(new Date(System.currentTimeMillis()));    		
+    	} else {
+    		_codingSchemeVersion = icdGemVersion;
     	}
     	
     	if(icdGemType == null) {

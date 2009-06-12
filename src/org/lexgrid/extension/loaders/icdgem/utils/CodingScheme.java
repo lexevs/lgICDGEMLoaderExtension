@@ -22,7 +22,7 @@ import java.util.ArrayList;
 
 public class CodingScheme {
     private String _codingSchemeName;
-    private String _codingSchemeId;
+    private String _codingSchemeUri;
     private String _defaultLanguage;
     private String _representsVersion;
     private String _formalName;
@@ -35,12 +35,12 @@ public class CodingScheme {
     private ArrayList<Association> _containsAssociations;
     
     public CodingScheme(String codingSchemeName,
-    		String codingSchemeId, String defaultLanguage,
+    		String codingSchemeUri, String defaultLanguage,
     		String representsVersion, String formalName,
     		String source, String entityDescription,
     		String copyright) {
     	_codingSchemeName = codingSchemeName;
-    	_codingSchemeId = codingSchemeId;
+    	_codingSchemeUri = codingSchemeUri;
     	_defaultLanguage = defaultLanguage;
     	_representsVersion = representsVersion;
     	_formalName = formalName;
@@ -69,12 +69,12 @@ public class CodingScheme {
     	return _codingSchemeName;
     }
     
-    public void setCsId(String csId) {
-    	_codingSchemeId = csId;
+    public void setCsUri(String csUri) {
+    	_codingSchemeUri = csUri;
     }
     
-    public String getCsId() {
-    	return _codingSchemeId;
+    public String getCsUri() {
+    	return _codingSchemeUri;
     }
     
     public void setDefaultLanguage(String defaultLanguage) {

@@ -26,13 +26,13 @@ public class FileProcessor {
 		
 		CodingScheme cs = new CodingScheme();
 		cs.setCopyright(props.getCsCopyright());
-		cs.setCsId(props.getCsUri());
+		cs.setCsUri(props.getCsUri());
 		cs.setCsName(props.getCsLocalName());
 		cs.setDefaultLanguage(props.getEnglishName());
-		cs.setEntityDescription("??");
+		cs.setEntityDescription(props.getCsDescription());
 		cs.setFormalName(props.getCsUri());
 		cs.setSource(props.getCsSource());
-		cs.setRepresentsVersion("??");
+		cs.setRepresentsVersion(props.getIcdGemVersion());
 		
 		try {
 			BufferedReader fileReader = new BufferedReader(new FileReader(fileName));

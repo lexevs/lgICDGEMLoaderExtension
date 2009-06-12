@@ -243,7 +243,7 @@ public class GEMBaseLoader {
                     // also, get a lock
                     // so no one else can start loading.
                 	loadedCodingSchemes = new URNVersionPair[1];
-                	loadedCodingSchemes[0] = new URNVersionPair(codingScheme.getCsId(), codingScheme.getRepresentsVersion());
+                	loadedCodingSchemes[0] = new URNVersionPair(codingScheme.getCsUri(), codingScheme.getRepresentsVersion());
 
                     locks = isTerminologyAlreadyLoaded(loadedCodingSchemes, sci_, false);
                     if (locks == null) {
