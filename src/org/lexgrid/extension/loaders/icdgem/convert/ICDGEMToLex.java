@@ -368,7 +368,7 @@ public class ICDGEMToLex {
             // hasSubType/Isa
             insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
-            insert.setString(k++, codingScheme.getCsUri()); // entityCodeNamespace
+            insert.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_ISA_ASSOCIATION); // entityCode
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_ISA_ASSOCIATION); // associationName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_ISA_ASSOCIATION); // forwardName
@@ -390,7 +390,7 @@ public class ICDGEMToLex {
             k = 1;
             insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
-            insert.setString(k++, codingScheme.getCsUri()); // entityCodeNamespace
+            insert.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
             insert.setString(k++, ICDGEMConstants.ASSOCIATION_MAPS_TO); // entityCode
             insert.setString(k++, ICDGEMConstants.ASSOCIATION_MAPS_TO); // associationName
             insert.setString(k++, ICDGEMConstants.ASSOCIATION_MAPS_TO); // forwardName
@@ -853,6 +853,7 @@ public class ICDGEMToLex {
 
     }
     
+    // mapsTo
     private void loadMapsToRelations(CodingScheme codingScheme) throws Exception {
         _messages.info("ICDGEMToLex: loadMapsToRelations: Loading relationships");
         PreparedStatement insertIntoConceptAssociations = _sqlConnection.prepareStatement(_tableConstants
@@ -873,7 +874,7 @@ public class ICDGEMToLex {
             	asso = mapsToAssociations.get(i);
                 checkForAssociation.setString(1, codingScheme.getCsName());
                 checkForAssociation.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS);
-                checkForAssociation.setString(3, ICDGEMConstants.ASSOCIATION_HAS_SUBTYPE);
+                checkForAssociation.setString(3, ICDGEMConstants.ASSOCIATION_MAPS_TO);
                 checkForAssociation.setString(4, codingScheme.getCsName());
                 checkForAssociation.setString(5, asso.getSourceCode());
                 checkForAssociation.setString(6, codingScheme.getCsName());
@@ -904,7 +905,7 @@ public class ICDGEMToLex {
                 insertIntoConceptAssociations.setString(1, codingScheme.getCsName()); // codingSchemeName
                 insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
                 insertIntoConceptAssociations.setString(3, codingScheme.getCsName()); // entityCodeNamespace
-                insertIntoConceptAssociations.setString(4, ICDGEMConstants.ASSOCIATION_HAS_SUBTYPE); // entityCode
+                insertIntoConceptAssociations.setString(4, ICDGEMConstants.ASSOCIATION_MAPS_TO); // entityCode
                 insertIntoConceptAssociations.setString(5, codingScheme.getCsName()); // sourceEntityCodeNamespace
                 insertIntoConceptAssociations.setString(6, asso.getSourceCode()); // sourceEntityCode
                 insertIntoConceptAssociations.setString(7, codingScheme.getCsName()); // targetEntityCodeNamespace

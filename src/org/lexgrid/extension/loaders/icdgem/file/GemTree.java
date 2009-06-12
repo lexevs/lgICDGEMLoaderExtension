@@ -62,7 +62,6 @@ public class GemTree {
 			leaf = leafNodes.get(i);
 			gce = new GemComboEntry();
 			getCombination(gce, leaf);
-			System.out.println("GemTree: getCombinations: combo: " + gce.toString());
 			returnValue.add(gce);
 		}
 		return returnValue;
