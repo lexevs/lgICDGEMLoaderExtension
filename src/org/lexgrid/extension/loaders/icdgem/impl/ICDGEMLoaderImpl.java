@@ -57,7 +57,7 @@ public class ICDGEMLoaderImpl extends GEMBaseLoader implements ICDGEMLoader {
     	
     	messagesDirector.debug("ICDGEMLoaderImpl: ICDGEMLoaderImpl(props): entry");
     	String ver = _props.getLoaderVersion();
-    	messagesDirector.info("ICDGEMLoaderImpl: ICDGEMLoaderImpl(props): ICD-10 Loader version: " + ver);
+    	messagesDirector.info("ICDGEMLoaderImpl: ICDGEMLoaderImpl(props): Loader version: " + ver);
         super.setName(_props.getLoaderName());
         super.setDescription(_props.getLoaderDescription());
         messagesDirector.debug("ICDGEMLoaderImpl: ICDGEMLoaderImpl(props): exit");
@@ -75,7 +75,7 @@ public class ICDGEMLoaderImpl extends GEMBaseLoader implements ICDGEMLoader {
         	inputFormatInterface.testConnection();
         } catch (ConnectionFailure e) {
             inUse = false;
-            throw new LBParameterException("ICDGEMLoaderImpl: load: path to ICD-10 files appears to be invalid - " + e);
+            throw new LBParameterException("ICDGEMLoaderImpl: load: path to input file appears to be invalid - " + e);
         }
         loadStatus = new LoadStatus();
         loadStatus.setLoadSource(getStringFromURI(icd10inputFile));
