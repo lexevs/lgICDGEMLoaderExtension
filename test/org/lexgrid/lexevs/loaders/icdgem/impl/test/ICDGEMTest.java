@@ -52,18 +52,19 @@ public class ICDGEMTest extends TestCase {
 //			e.printStackTrace();
 //		}    	
     }
-    
+/*    
     public void testLoadICD10To9Cm() throws Exception {
-    	String[] args = {"-in", "resources/testData/icdgem/super_small_2009_I9gem.txt",
+    	String[] args = {"-in", "resources/testData/icdgem/small_2009_I10gem.txt",
     			"-type", "i10to9cm", "-ver", "JUnit", "-t", "JUnitTest" };
     	this.runIt(args);
     }
-/*    
+*/
+    
     public void testLoadICD9To10Cm() throws Exception {
-    	String[] args = {"-in", "resources/testData/icdgem/small_2009_I9gem.txt",
+    	String[] args = {"-in", "resources/testData/icdgem/super_small_2009_I9gem.txt",
     			"-type", "i9to10cm", "-ver", "JUnit", "-t", "JUnitTest" };
     	this.runIt(args);    }
-    
+/*    
     public void testLoadICD9To10Pcs() throws Exception {
     	String[] args = {"-in", "resources/testData/icdgem/small_gem_i9pcs.txt",
     			"-type", "i9to10pcs", "-ver", "JUnit", "-t", "JUnitTest" };
