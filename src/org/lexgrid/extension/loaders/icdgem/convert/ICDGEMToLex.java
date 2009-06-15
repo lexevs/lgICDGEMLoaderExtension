@@ -827,9 +827,9 @@ public class ICDGEMToLex {
                 insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
                 insertIntoConceptAssociations.setString(3, codingScheme.getCsName()); // entityCodeNamespace
                 insertIntoConceptAssociations.setString(4, SQLTableConstants.TBLCOLVAL_HASSUBTYPE_ASSOCIATION); // entityCode
-                insertIntoConceptAssociations.setString(5, codingScheme.getCsName()); // sourceEntityCodeNamespace
+                insertIntoConceptAssociations.setString(5, asso.getSourceCodingScheme()); // sourceEntityCodeNamespace
                 insertIntoConceptAssociations.setString(6, asso.getSourceCode()); // sourceEntityCode
-                insertIntoConceptAssociations.setString(7, codingScheme.getCsName()); // targetEntityCodeNamespace
+                insertIntoConceptAssociations.setString(7, asso.getTargetCodingScheme()); // targetEntityCodeNamespace
                 insertIntoConceptAssociations.setString(8, asso.getTargetCode()); // targetEntityCode
                 insertIntoConceptAssociations.setString(9, null); // multiAttributesKey
                 insertIntoConceptAssociations.setString(10, null); // associationInstanceId 
@@ -906,9 +906,9 @@ public class ICDGEMToLex {
                 insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
                 insertIntoConceptAssociations.setString(3, codingScheme.getCsName()); // entityCodeNamespace
                 insertIntoConceptAssociations.setString(4, ICDGEMConstants.ASSOCIATION_MAPS_TO); // entityCode
-                insertIntoConceptAssociations.setString(5, codingScheme.getCsName()); // sourceEntityCodeNamespace
+                insertIntoConceptAssociations.setString(5, asso.getSourceCodingScheme()); // sourceEntityCodeNamespace
                 insertIntoConceptAssociations.setString(6, asso.getSourceCode()); // sourceEntityCode
-                insertIntoConceptAssociations.setString(7, codingScheme.getCsName()); // targetEntityCodeNamespace
+                insertIntoConceptAssociations.setString(7, asso.getTargetCodingScheme()); // targetEntityCodeNamespace
                 insertIntoConceptAssociations.setString(8, asso.getTargetCode()); // targetEntityCode
                 insertIntoConceptAssociations.setString(9, null); // multiAttributesKey
                 insertIntoConceptAssociations.setString(10, null); // associationInstanceId 
@@ -945,7 +945,7 @@ public class ICDGEMToLex {
                 + " = ? AND " + _tableConstants.targetCSIdOrEntityCodeNS + " = ? AND "
                 + _tableConstants.targetEntityCodeOrId + " = ?");
 
-        ArrayList<Association> containsAsso = codingScheme.getHasSubTypeAssociations();
+        ArrayList<Association> containsAsso = codingScheme.getContainsAssociations();
         Association asso = null;
         for (int i = 0; i < containsAsso.size(); i++) {
             try {
@@ -986,7 +986,7 @@ public class ICDGEMToLex {
                 insertIntoConceptAssociations.setString(4, ICDGEMConstants.ASSOCIATION_CONTAINS); // entityCode
                 insertIntoConceptAssociations.setString(5, codingScheme.getCsName()); // sourceEntityCodeNamespace
                 insertIntoConceptAssociations.setString(6, asso.getSourceCode()); // sourceEntityCode
-                insertIntoConceptAssociations.setString(7, codingScheme.getCsName()); // targetEntityCodeNamespace
+                insertIntoConceptAssociations.setString(7, asso.getTargetCodingScheme()); // targetEntityCodeNamespace
                 insertIntoConceptAssociations.setString(8, asso.getTargetCode()); // targetEntityCode
                 insertIntoConceptAssociations.setString(9, null); // multiAttributesKey
                 insertIntoConceptAssociations.setString(10, null); // associationInstanceId 
