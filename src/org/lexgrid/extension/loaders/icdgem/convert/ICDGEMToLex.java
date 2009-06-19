@@ -74,12 +74,12 @@ public class ICDGEMToLex {
 
         _tableConstants = _tableUtility.getSQLTableConstants();
 
+        prepCodingScheme(_codingScheme);
         loadConcepts(_codingScheme);
         loadHasSubtypeRelations(_codingScheme);
         loadMapsToRelations(_codingScheme);
         loadContainsRelations(_codingScheme);
         _sqlConnection.close();
-
     }
 
     private void prepareDatabase(String codingScheme, String sqlServer, String sqlDriver, String sqlUsername,
@@ -104,12 +104,12 @@ public class ICDGEMToLex {
         _messages.info("ICDGEMToLex: prepareDatabase: Cleaning tables");
         _tableUtility.cleanTables(codingScheme);
     }
-
-    private void loadConcepts(CodingScheme codingScheme) throws Exception {
+    
+    private void prepCodingScheme(CodingScheme codingScheme) throws Exception {
         PreparedStatement insert = _sqlConnection.prepareStatement(_tableConstants
                 .getInsertStatementSQL(SQLTableConstants.CODING_SCHEME));
 
-        _messages.info("ICDGEMToLex: loadConcepts: Loading coding scheme");
+        _messages.info("ICDGEMToLex: prepCodingScheme: Loading coding scheme");
         int ii = 1;
         /*
         codingSchemeName, 
@@ -141,13 +141,13 @@ public class ICDGEMToLex {
             insert.executeUpdate();
         } catch (SQLException e) {
             _messages.fatalAndThrowException(
-                    "ICDGEMToLex: loadConcepts: FATAL ERROR - It is likely that your coding scheme name or CodingSchemeId is not unique.", e);
+                    "ICDGEMToLex: prepCodingScheme: FATAL ERROR - It is likely that your coding scheme name or CodingSchemeId is not unique.", e);
         }
 
         insert.close();
 
         try {
-            _messages.info("ICDGEMToLex: loadConcepts: Loading coding scheme supported attributes");
+            _messages.info("ICDGEMToLex: prepCodingScheme: Loading coding scheme supported attributes");
             insert = _sqlConnection.prepareStatement(_tableConstants
                     .getInsertStatementSQL(SQLTableConstants.CODING_SCHEME_SUPPORTED_ATTRIBUTES));
             /*
@@ -322,7 +322,7 @@ public class ICDGEMToLex {
             }
             insert.close();
         } catch (SQLException e) {
-            _messages.fatalAndThrowException("ICDGEMToLex: loadConcepts: FATAL ERROR - Problem loading the coding scheme supported attributes", e);
+            _messages.fatalAndThrowException("ICDGEMToLex: prepCodingScheme: FATAL ERROR - Problem loading the coding scheme supported attributes", e);
         }
 
         _messages.info("Loading relation definition");
@@ -336,10 +336,10 @@ public class ICDGEMToLex {
             insert.executeUpdate();
             insert.close();
         } catch (SQLException e) {
-            _messages.fatalAndThrowException("ICDGEMToLex: loadConcepts: FATAL ERROR - Problem loading the relation definition", e);
+            _messages.fatalAndThrowException("ICDGEMToLex: prepCodingScheme: FATAL ERROR - Problem loading the relation definition", e);
         }
 
-        _messages.info("ICDGEMToLex: loadConcepts: Loading isa association definition");
+        _messages.info("ICDGEMToLex: prepCodingScheme: Loading isa association definition");
         try {
             insert = _sqlConnection.prepareStatement(_tableConstants
                     .getInsertStatementSQL(SQLTableConstants.ASSOCIATION));
@@ -432,10 +432,10 @@ public class ICDGEMToLex {
             
             insert.close();
         } catch (SQLException e) {
-            _messages.fatalAndThrowException("ICDGEMToLex: loadConcepts: FATAL ERROR - Problem loading the association definition", e);
+            _messages.fatalAndThrowException("ICDGEMToLex: prepCodingScheme: FATAL ERROR - Problem loading the association definition", e);
         }
         
-        _messages.info("ICDGEMToLex: loadConcepts: Loading hassubtype association definition");
+        _messages.info("ICDGEMToLex: prepCodingScheme: Loading hassubtype association definition");
         try {
             insert = _sqlConnection.prepareStatement(_tableConstants
                     .getInsertStatementSQL(SQLTableConstants.ASSOCIATION));
@@ -482,13 +482,13 @@ public class ICDGEMToLex {
             insert.executeUpdate();
             insert.close();
         } catch (SQLException e) {
-            _messages.fatalAndThrowException("ICDGEMToLex: loadConcepts: FATAL ERROR - Problem loading the hassubtype association definition", e);
+            _messages.fatalAndThrowException("ICDGEMToLex: prepCodingScheme: FATAL ERROR - Problem loading the hassubtype association definition", e);
         }
+    }
 
-        
-        
+    private void loadConcepts(CodingScheme codingScheme) throws Exception {
 
-        insert = _sqlConnection.prepareStatement(_tableConstants.getInsertStatementSQL(SQLTableConstants.ENTITY));
+        PreparedStatement insert = _sqlConnection.prepareStatement(_tableConstants.getInsertStatementSQL(SQLTableConstants.ENTITY));
 
         PreparedStatement insertIntoConceptProperty = _sqlConnection.prepareStatement(_tableConstants
                 .getInsertStatementSQL(SQLTableConstants.ENTITY_PROPERTY));
@@ -509,7 +509,7 @@ public class ICDGEMToLex {
 
         _messages.info("ICDGEMToLex: loadConcepts: Loading coded entry and concept property");
 
-        ArrayList<BaseConcept> concepts = codingScheme.getConcepts();
+        ArrayList<BaseConcept> concepts = codingScheme.getUniqueConcepts();
         BaseConcept concept = null;
 
         for (int i = 0; i < concepts.size(); i++) {
@@ -788,7 +788,7 @@ public class ICDGEMToLex {
                 + " = ? AND " + _tableConstants.targetCSIdOrEntityCodeNS + " = ? AND "
                 + _tableConstants.targetEntityCodeOrId + " = ?");
 
-        ArrayList<Association> hasSubTypeAsso = codingScheme.getHasSubTypeAssociations();
+        ArrayList<Association> hasSubTypeAsso = codingScheme.getUniqueHasSubTypeAssociations();
         Association asso = null;
         for (int i = 0; i < hasSubTypeAsso.size(); i++) {
             try {
@@ -867,7 +867,7 @@ public class ICDGEMToLex {
                 + " = ? AND " + _tableConstants.targetCSIdOrEntityCodeNS + " = ? AND "
                 + _tableConstants.targetEntityCodeOrId + " = ?");
 
-        ArrayList<Association> mapsToAssociations = codingScheme.getMapsToAssociations();
+        ArrayList<Association> mapsToAssociations = codingScheme.getUniqueMapsToAssociations();
         Association asso = null;
         for (int i = 0; i < mapsToAssociations.size(); i++) {
             try {
@@ -945,7 +945,7 @@ public class ICDGEMToLex {
                 + " = ? AND " + _tableConstants.targetCSIdOrEntityCodeNS + " = ? AND "
                 + _tableConstants.targetEntityCodeOrId + " = ?");
 
-        ArrayList<Association> containsAsso = codingScheme.getContainsAssociations();
+        ArrayList<Association> containsAsso = codingScheme.getUniqueContainsAssociations();
         Association asso = null;
         for (int i = 0; i < containsAsso.size(); i++) {
             try {
@@ -1007,163 +1007,6 @@ public class ICDGEMToLex {
 
         insertIntoConceptAssociations.close();
         checkForAssociation.close();
-
-    }
-    
-
-
-    private void loadRelations(CodingScheme codingScheme, ArrayList<Association> associations) throws Exception {
-        TreeSet<String> relationNameSet = new TreeSet<String>();
-        _messages.info("ICDGEMToLex: loadRelations: Loading relationships");
-        PreparedStatement insertIntoConceptAssociations = _sqlConnection.prepareStatement(_tableConstants
-                .getInsertStatementSQL(SQLTableConstants.ENTITY_ASSOCIATION_TO_ENTITY));
-
-        PreparedStatement insert = _sqlConnection.prepareStatement(_tableConstants
-                .getInsertStatementSQL(SQLTableConstants.ASSOCIATION));
-        Association association = null;
-
-        for (int i = 0; i < associations.size(); i++) {
-            try {
-            	association = associations.get(i);
-                relationNameSet.add(association.getRelationName());
-                /*
-                 * 1  codingSchemeName
-                 * 2  containerName
-                 * 3  entityCodeNamespace
-                 * 4  entityCode
-                 * 5  sourceEntityCodeNamespace
-                 * 6  sourceEntityCode
-                 * 7  targetEntityCodeNamespace
-                 * 8  targetEntityCode
-                 * 9  multiAttributesKey
-                 * 10 associationInstanceId
-                 * 11 isDefining
-                 * 12 isInferred
-                 * 13 isActive
-                 * 14 entryStateId
-                 */
-                insertIntoConceptAssociations.setString(1, codingScheme.getCsName()); // codingSchemeName
-                insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
-                insertIntoConceptAssociations.setString(3, codingScheme.getCsUri()); // entityCodeNamespace
-                insertIntoConceptAssociations.setString(4, association.getRelationName()); // entityCode
-                insertIntoConceptAssociations.setString(5, association.getSourceCodingScheme()); // sourceEntityCodeNamespace
-                insertIntoConceptAssociations.setString(6, association.getSourceCode()); // sourceEntityCode
-                insertIntoConceptAssociations.setString(7, association.getTargetCodingScheme()); // targetEntityCodeNamespace
-                insertIntoConceptAssociations.setString(8, association.getTargetCode()); // targetEntityCode
-                insertIntoConceptAssociations.setString(9, null); // multiAttributesKey
-                insertIntoConceptAssociations.setString(10, null); // associationInstanceId
-                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 11, null, false); // isDefining
-                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 12, null, false); // isInferred
-                DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 13, null, false); // isActive
-                insertIntoConceptAssociations.setLong(14, i); // entryStateId
-
-                insertIntoConceptAssociations.executeUpdate();
-                if (i % 10 == 0) {
-                    _messages.busy();
-                }
-
-            } catch (SQLException e) {
-                _messages.fatalAndThrowException("ICDGEMToLex: loadRelations: Problem loading relationships for " + association, e);
-            }
-        }
-
-        for (Iterator<String> i = relationNameSet.iterator(); i.hasNext();) {
-            _messages.info("ICDGEMToLex: loadRelations: Loading coding scheme supported attributes");
-            insert = _sqlConnection.prepareStatement(_tableConstants
-                    .getInsertStatementSQL(SQLTableConstants.CODING_SCHEME_SUPPORTED_ATTRIBUTES));
-
-            String rel_name = i.next().toString();
-            
-            /*
-             * INSERT INTO codingSchemeSupportedAttrib (codingSchemeName, supportedAttributeTag, id, uri, idValue, val1, val2) VALUES ('ICD-10-to-9-CM-GEM','Association','mapsTo','','','','')"
-             * codingSchemeName
-             * supportedAttributeTag
-             * id
-             * uri
-             * idValue
-             * val1
-             * val2
-             */
-            
-            insert.setString(1, codingScheme.getCsName());
-            insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_ASSOCIATION);
-            insert.setString(3, rel_name);
-            insert.setString(4, "");
-            insert.setString(5, "");
-            insert.setString(6, "");
-            insert.setString(7, "");
-
-            try {
-                insert.executeUpdate();
-            } catch (SQLException ex) {
-                _messages.fatalAndThrowException("ICDGEMToLex: loadRelations: Problem loading supportedAssociation for " + rel_name, ex);
-            }
-
-            /*
-             * codingSchemeName
-             * containerName
-             * entityCodeNamespace
-             * entityCode
-             * associationName
-             * forwardName
-             * reverseName
-             * inverseId
-             * isNavigable
-             * isTransitive
-             * isAntiTransitive
-             * isSymmetric
-             * isAntiSymmetric
-             * isReflexive
-             * isAntiReflexive
-             * isFunctional
-             * isReverseFunctional
-             * entityDescription
-             */
-            insert = _sqlConnection.prepareStatement(_tableConstants
-                    .getInsertStatementSQL(SQLTableConstants.ASSOCIATION));
-            insert.setString(1, codingScheme.getCsName()); // codingSchemeName
-            insert.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
-            // entityCodeNamespace
-            // entityCode
-            // sourceEntityCodeNamespace
-            // sourceEntityCode
-            // targetEntityCodeNamespace
-            // targetEntityCode
-            // multiAttributesKey
-            // associationInstanceId
-            // isDefining
-            // isInferred
-            // isActive
-            // isActive
-            // entryStateId
-            insert.setString(3, rel_name);  
-            insert.setString(4, rel_name);
-            insert.setString(5, "");
-            insert.setString(6, "");
-
-            // TODO deal with isNavigable, inverse
-            // properly - what should they be?
-            DBUtility.setBooleanOnPreparedStatment(insert, 7, new Boolean("true"), false);
-            DBUtility.setBooleanOnPreparedStatment(insert, 8, new Boolean("true"), false);
-            DBUtility.setBooleanOnPreparedStatment(insert, 9, new Boolean("true"), false);
-            DBUtility.setBooleanOnPreparedStatment(insert, 10, null, false);
-            DBUtility.setBooleanOnPreparedStatment(insert, 11, null, false);
-            DBUtility.setBooleanOnPreparedStatment(insert, 12, null, false);
-            DBUtility.setBooleanOnPreparedStatment(insert, 13, null, false);
-            DBUtility.setBooleanOnPreparedStatment(insert, 14, null, false);
-            DBUtility.setBooleanOnPreparedStatment(insert, 15, null, false);
-            DBUtility.setBooleanOnPreparedStatment(insert, 16, null, false);
-            insert.setString(17, "");
-            insert.setString(18, "");
-            try {
-                insert.executeUpdate();
-            } catch (SQLException ex) {
-                _messages.fatalAndThrowException("ICDGEMToLex: loadRelations: Problem loading Association for " + rel_name, ex);
-            }
-
-        }
-        insert.close();
-        insertIntoConceptAssociations.close();
 
     }
 }

@@ -129,6 +129,73 @@ public class CodingScheme {
     	return _concepts;
     }
     
+    public ArrayList<BaseConcept> getUniqueConcepts() {
+    	return this.getUniqueConcepts(_concepts);
+    }
+    
+    public ArrayList<Association> getUniqueHasSubTypeAssociations() {
+    	return this.getUniqueAssociations(this._hasSubTypeAssociations);
+    }
+    
+    public ArrayList<Association> getUniqueMapsToAssociations() {
+    	return this.getUniqueAssociations(this._mapsToAssociations);
+    }
+    
+    public ArrayList<Association> getUniqueContainsAssociations() {
+    	return this.getUniqueAssociations(this._containsAssociations);
+    }    
+    
+    private ArrayList<BaseConcept> getUniqueConcepts(ArrayList<BaseConcept> concepts) {
+    	ArrayList<BaseConcept> ucons = new ArrayList<BaseConcept>();;
+    	BaseConcept con1 = null;
+    	BaseConcept con2 = null;
+    	boolean found = false;
+    	int j = 0;
+    	for(int i = 0; i<concepts.size(); ++i) {
+    		con1 = concepts.get(i);
+    		found = false;
+    		j = 0;
+    		while(!found) {
+    			con2 = concepts.get(j);
+    			if(con1.getCode().equalsIgnoreCase(con2.getCode())) {
+    				found = true;
+    			} else {
+    				++j;
+    			}
+    		}
+    		if(found == false) {
+    			ucons.add(con1);
+    		}
+    	}
+    	return ucons;
+    }
+    
+    private ArrayList<Association> getUniqueAssociations(ArrayList<Association> assos) {
+    	ArrayList<Association> uassos = new ArrayList<Association>();
+		Association asso1 = null;
+		Association asso2 = null;
+    	boolean found = false;
+    	int j = 0;
+    	for(int i = 0; i<assos.size(); ++i) {
+    		asso1 = assos.get(i);
+    		found = false;
+    		j = 0;
+    		while(!found) {
+    			asso2 = assos.get(j);
+    			if(asso1.equals(asso2)) {
+    				found = true;
+    			} else {
+    				++j;
+    			}
+    		}
+    		if(found == false) {
+    			uassos.add(asso1);
+    		}
+    	}
+    	return uassos;
+    }
+    
+    
     public void addConcpet(BaseConcept concept) {
     	_concepts.add(concept);
     }

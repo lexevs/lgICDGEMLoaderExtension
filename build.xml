@@ -39,6 +39,10 @@
 
 		<copy todir="${classes.dir}" file="extension.xml" />
 		<copy todir="${classes.dir}" file="${src.dir}/icdGemLoader.properties" />
+		<copy todir="${classes.dir}" file="${src.dir}/icd10to9cm.properties" />
+		<copy todir="${classes.dir}" file="${src.dir}/icd10to9pcs.properties" />
+		<copy todir="${classes.dir}" file="${src.dir}/icd9to10cm.properties" />
+		<copy todir="${classes.dir}" file="${src.dir}/icd9to10pcs.properties" />
 	</target>
 
 	<target name="jar" depends="compile" description="generate the jar file">

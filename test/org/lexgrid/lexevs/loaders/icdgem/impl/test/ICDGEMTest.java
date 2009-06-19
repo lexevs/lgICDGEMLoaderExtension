@@ -24,7 +24,6 @@ import org.lexgrid.extension.loaders.icdgem.admin.LoadICDGEM;
 import org.lexgrid.extension.loaders.icdgem.impl.ICDGEMLoaderImpl;
 
 import org.LexGrid.LexBIG.DataModel.InterfaceElements.types.ProcessState;
-import org.LexGrid.LexBIG.Exceptions.LBException;
 
 /**
  * This class tests the ICD GEM loader via JUnit.
@@ -40,7 +39,6 @@ public class ICDGEMTest extends TestCase {
     
     public void runIt(String[] args) throws Exception {
     	LoadICDGEM runner = new LoadICDGEM();
-//    	try {
 			runner.run(args);
 			ICDGEMLoaderImpl icdGemLoader = runner.getLoader();
 	        while (icdGemLoader.getStatus().getEndTime() == null) {
@@ -48,23 +46,24 @@ public class ICDGEMTest extends TestCase {
 	        }	        
 	        assertTrue(icdGemLoader.getStatus().getState().getType() == ProcessState.COMPLETED_TYPE);
 	        assertFalse(icdGemLoader.getStatus().getErrorsLogged().booleanValue());
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}    	
     }
-/*    
+    
     public void testLoadICD10To9Cm() throws Exception {
     	String[] args = {"-in", "resources/testData/icdgem/small_2009_I10gem.txt",
     			"-type", "i10to9cm", "-ver", "JUnit", "-t", "JUnitTest" };
     	this.runIt(args);
     }
-*/
-    
+
     public void testLoadICD9To10Cm() throws Exception {
-    	String[] args = {"-in", "resources/testData/icdgem/super_small_2009_I9gem.txt",
+    	String[] args = {"-in", "resources/testData/icdgem/small_2009_I9gem.txt",
     			"-type", "i9to10cm", "-ver", "JUnit", "-t", "JUnitTest" };
     	this.runIt(args);    }
-/*    
+    
+//    public void testLoadICD9To10Cm_super_small() throws Exception {
+//    	String[] args = {"-in", "resources/testData/icdgem/super_small_2009_I9gem.txt",
+//    			"-type", "i9to10cm", "-ver", "JUnit", "-t", "JUnitTest" };
+//    	this.runIt(args);    }
+    	
     public void testLoadICD9To10Pcs() throws Exception {
     	String[] args = {"-in", "resources/testData/icdgem/small_gem_i9pcs.txt",
     			"-type", "i9to10pcs", "-ver", "JUnit", "-t", "JUnitTest" };
@@ -75,5 +74,4 @@ public class ICDGEMTest extends TestCase {
     			"-type", "i10to9pcs", "-ver", "JUnit", "-t", "JUnitTest" };
     	this.runIt(args);
     }
-*/    
 }
