@@ -148,6 +148,9 @@ public class ICDGEMToLex {
 
         try {
             _messages.info("ICDGEMToLex: prepCodingScheme: Loading coding scheme supported attributes");
+//-------------------------------------------            
+// CODING_SCHEME_SUPPORTED_ATTRIBUTES  start-
+//-------------------------------------------            
             insert = _sqlConnection.prepareStatement(_tableConstants
                     .getInsertStatementSQL(SQLTableConstants.CODING_SCHEME_SUPPORTED_ATTRIBUTES));
             /*
@@ -266,6 +269,42 @@ public class ICDGEMToLex {
                 insert.setString(7, "");
             }
             insert.executeUpdate();
+            
+            // supported attribute 'namespace' ICD-10-PCS
+            insert.setString(1, codingScheme.getCsName());
+            insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_NAMESPACE);
+            insert.setString(3, _props.getIcd10PcsLocalName());
+            insert.setString(4, _props.getIcd10PcsUri());
+            if (_tableConstants.supports2009Model()) {
+                insert.setString(5, _props.getIcd10PcsLocalName());
+                insert.setString(6, _props.getIcd10PcsLocalName());
+                insert.setString(7, "");
+            }
+            insert.executeUpdate();
+            
+            // supported attribute 'namespace' ICD-10-CM
+            insert.setString(1, codingScheme.getCsName());
+            insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_NAMESPACE);
+            insert.setString(3, _props.getIcd10CmLocalName());
+            insert.setString(4, _props.getIcd10CmUri());
+            if (_tableConstants.supports2009Model()) {
+                insert.setString(5, _props.getIcd10CmLocalName());
+                insert.setString(6, _props.getIcd10CmLocalName());
+                insert.setString(7, "");
+            }
+            insert.executeUpdate();
+            
+            // supported attribute 'namespace' ICD-9-CM
+            insert.setString(1, codingScheme.getCsName());
+            insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_NAMESPACE);
+            insert.setString(3, _props.getIcd9CmLocalName());
+            insert.setString(4, _props.getIcd9CmUri());
+            if (_tableConstants.supports2009Model()) {
+                insert.setString(5, _props.getIcd9CmLocalName());
+                insert.setString(6, _props.getIcd9CmLocalName());
+                insert.setString(7, "");
+            }
+            insert.executeUpdate();            
 
             insert.setString(1, codingScheme.getCsName());
             insert.setString(2, SQLTableConstants.TBLCOLVAL_SUPPTAG_PROPERTY);
@@ -279,7 +318,11 @@ public class ICDGEMToLex {
 
             insert.executeUpdate();
             insert.close();
+//-------------------------------------------            
+// CODING_SCHEME_SUPPORTED_ATTRIBUTES  end  -
+//-------------------------------------------            
 
+            
             insert = _sqlConnection.prepareStatement(_tableConstants
                     .getInsertStatementSQL(SQLTableConstants.CODING_SCHEME_MULTI_ATTRIBUTES));
 

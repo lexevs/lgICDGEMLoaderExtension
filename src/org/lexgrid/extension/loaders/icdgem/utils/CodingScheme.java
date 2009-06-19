@@ -150,21 +150,30 @@ public class CodingScheme {
     	BaseConcept con1 = null;
     	BaseConcept con2 = null;
     	boolean found = false;
+    	boolean done = false;
     	int j = 0;
     	for(int i = 0; i<concepts.size(); ++i) {
     		con1 = concepts.get(i);
-    		found = false;
-    		j = 0;
-    		while(!found) {
-    			con2 = concepts.get(j);
-    			if(con1.getCode().equalsIgnoreCase(con2.getCode())) {
-    				found = true;
-    			} else {
-    				++j;
-    			}
-    		}
-    		if(found == false) {
+    		if(ucons.size() == 0) {
     			ucons.add(con1);
+    		} else {
+        		found = false;
+        		done = false;
+        		j = 0;
+        		while(!found && !done) {
+        			con2 = ucons.get(j);
+        			if(con1.equals(con2)) {
+        				found = true;
+        			} else {
+        				++j;
+        				if(j == ucons.size()) {
+        					done = true;
+        				}
+        			}
+        		}
+        		if(found == false) {
+        			ucons.add(con1);
+        		}    			
     		}
     	}
     	return ucons;
@@ -175,21 +184,30 @@ public class CodingScheme {
 		Association asso1 = null;
 		Association asso2 = null;
     	boolean found = false;
+    	boolean done = false;
     	int j = 0;
     	for(int i = 0; i<assos.size(); ++i) {
     		asso1 = assos.get(i);
-    		found = false;
-    		j = 0;
-    		while(!found) {
-    			asso2 = assos.get(j);
-    			if(asso1.equals(asso2)) {
-    				found = true;
-    			} else {
-    				++j;
-    			}
-    		}
-    		if(found == false) {
+    		if(uassos.size() == 0) {
     			uassos.add(asso1);
+    		} else {
+        		found = false;
+        		done = false;
+        		j = 0;
+        		while(!found && !done) {
+        			asso2 = uassos.get(j);
+        			if(asso1.equals(asso2)) {
+        				found = true;
+        			} else {
+        				++j;
+        				if(j == uassos.size()) {
+        					done = true;
+        				}
+        			}
+        		}
+        		if(found == false) {
+        			uassos.add(asso1);
+        		}    			
     		}
     	}
     	return uassos;

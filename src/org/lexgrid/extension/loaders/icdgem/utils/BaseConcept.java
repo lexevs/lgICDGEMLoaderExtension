@@ -34,4 +34,21 @@ public abstract class BaseConcept {
     public String getSourceCodingScheme() {
     	return _sourceCodingScheme;
     }
+    
+    public boolean equals(Object o) {
+        if ((o instanceof ICD10CMConcept) == true || (o instanceof ICD10PCSConcept == true) ||
+        	(o instanceof ICD9CMConcept) == true || (o instanceof ICD9PCSConcept == true)) {
+        	BaseConcept bc = (BaseConcept)o;
+        	if((bc.getCode().equalsIgnoreCase(this.getCode()) == true) && 
+        		(bc.getSourceCodingScheme().equalsIgnoreCase(this.getSourceCodingScheme()) == true)) {
+        		return true;
+        	} else {
+        		return false;
+        	}
+        } else {
+        	return false;
+        }
+           
+    	
+    }
 }
