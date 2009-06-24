@@ -47,31 +47,29 @@ public class ICDGEMTest extends TestCase {
 	        assertTrue(icdGemLoader.getStatus().getState().getType() == ProcessState.COMPLETED_TYPE);
 	        assertFalse(icdGemLoader.getStatus().getErrorsLogged().booleanValue());
     }
-    
-    public void testLoadICD10To9Cm() throws Exception {
-    	String[] args = {"-in", "resources/testData/icdgem/small_2009_I10gem.txt",
-    			"-type", "i10to9cm", "-ver", "JUnit", "-t", "JUnitTest" };
-    	this.runIt(args);
-    }
 
-    public void testLoadICD9To10Cm() throws Exception {
-    	String[] args = {"-in", "resources/testData/icdgem/small_2009_I9gem.txt",
-    			"-type", "i9to10cm", "-ver", "JUnit", "-t", "JUnitTest" };
+    public void testLoadICD10To9Cm() throws Exception {
+    	String[] args = {"-in", "resources/testData/icdgem/2009_I10gem.txt",
+    			"-type", "i10to9cm", "-ver", "bigtest", "-t", "alldata" };
     	this.runIt(args);    }
+
+//    public void testLoadICD9To10Cm() throws Exception {
+//    	String[] args = {"-in", "resources/testData/icdgem/2009_I9gem.txt",
+//    			"-type", "i9to10cm", "-ver", "bigtest", "-t", "alldata" };
+//    	this.runIt(args);    }
     
 //    public void testLoadICD9To10Cm_super_small() throws Exception {
 //    	String[] args = {"-in", "resources/testData/icdgem/super_small_2009_I9gem.txt",
-//    			"-type", "i9to10cm", "-ver", "JUnit", "-t", "JUnitTest" };
+//    			"-type", "i9to10cm", "-ver", "JUnit2", "-t", "JUnitTest2" };
 //    	this.runIt(args);    }
     	
-    public void testLoadICD9To10Pcs() throws Exception {
-    	String[] args = {"-in", "resources/testData/icdgem/small_gem_i9pcs.txt",
-    			"-type", "i9to10pcs", "-ver", "JUnit", "-t", "JUnitTest" };
-    	this.runIt(args);    }
-    
-    public void testLoadICD10To9Pcs() throws Exception {
-    	String[] args = {"-in", "resources/testData/icdgem/small_gem_pcsi9.txt",
-    			"-type", "i10to9pcs", "-ver", "JUnit", "-t", "JUnitTest" };
-    	this.runIt(args);
-    }
+//    public void testLoadICD9To10Pcs() throws Exception {
+//    	String[] args = {"-in", "resources/testData/icdgem/small_gem_i9pcs.txt",
+//    			"-type", "i9to10pcs", "-ver", "JUnit", "-t", "JUnitTest" };
+//    	this.runIt(args);    }
+    	
+//    public void testLoadICD10To9Pcs() throws Exception {
+//    	String[] args = {"-in", "resources/testData/icdgem/gem_pcsi9.txt",
+//    			"-type", "i10to9pcs", "-ver", "bigtest", "-t", "alldata" };
+//    	this.runIt(args);    }
 }
