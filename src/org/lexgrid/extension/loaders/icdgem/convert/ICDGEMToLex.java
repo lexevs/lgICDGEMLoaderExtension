@@ -588,7 +588,7 @@ public class ICDGEMToLex {
                     DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("false"), false); // isAnonymous
                     DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isActive
                     insert.setLong(k++, i); // entryStateId
-                    insert.setString(k++, concept.getCode()); // entityDescription
+                    insert.setString(k++, concept.getDescription()); // entityDescription
                     insert.executeUpdate();
                     
                     
@@ -639,7 +639,7 @@ public class ICDGEMToLex {
                     insertIntoConceptProperty.setString(k++, ""); // representationalForm
                     DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isActive
                     insertIntoConceptProperty.setLong(k++, i);  // entryStateId
-                    insertIntoConceptProperty.setString(k++, concept.getCode()); // propertyValue
+                    insertIntoConceptProperty.setString(k++, concept.getDescription()); // propertyValue
                     insertIntoConceptProperty.executeUpdate();
                 }
 
@@ -647,7 +647,7 @@ public class ICDGEMToLex {
                     // description to definition
                     // check for match first
                     checkForDefinition.setString(1, codingScheme.getCsName());
-                    checkForDefinition.setString(2, concept.getCode());
+                    checkForDefinition.setString(2, concept.getDescription());
                     checkForDefinition.setString(3, SQLTableConstants.TBLCOLVAL_DEFINITION);
 
                     results = checkForDefinition.executeQuery();
@@ -690,7 +690,7 @@ public class ICDGEMToLex {
                         insertIntoConceptProperty.setString(k++, ""); // representationalForm
                         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isActive
                         insertIntoConceptProperty.setLong(k++, i); // entryStateId
-                        insertIntoConceptProperty.setString(k++, concept.getCode()); // propertyValue
+                        insertIntoConceptProperty.setString(k++, concept.getDescription()); // propertyValue
                         insertIntoConceptProperty.executeUpdate();
                     }
                 }
@@ -724,7 +724,7 @@ public class ICDGEMToLex {
         DBUtility.setBooleanOnPreparedStatment(insert, k++, null); // isAnonymous
         DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isActive
         insert.setLong(k++, 0); // entryStateId
-        insert.setString(k++, specialConcept.getCode()); // entityDescription
+        insert.setString(k++, specialConcept.getDescription()); // entityDescription
         insert.executeUpdate();
         
         /*
@@ -759,7 +759,7 @@ public class ICDGEMToLex {
         insertIntoConceptProperty.setString(k++, ""); // representationalForm
         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isActive
         insertIntoConceptProperty.setLong(k++, 0); // entryStateId
-        insertIntoConceptProperty.setString(k++, specialConcept.getCode()); // propertyValue
+        insertIntoConceptProperty.setString(k++, specialConcept.getDescription()); // propertyValue
 
         insertIntoConceptProperty.executeUpdate();
         
@@ -807,7 +807,7 @@ public class ICDGEMToLex {
         insertIntoConceptProperty.setString(k++, ""); // representationalForm
         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isActive
         insertIntoConceptProperty.setLong(k++, 0); // entryStateId        
-        insertIntoConceptProperty.setString(k++, specialConcept.getCode()); // propertyValue
+        insertIntoConceptProperty.setString(k++, specialConcept.getDescription()); // propertyValue
         
         insertIntoConceptProperty.executeUpdate();
 
