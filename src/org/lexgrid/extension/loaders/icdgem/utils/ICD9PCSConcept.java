@@ -25,7 +25,7 @@ public class ICD9PCSConcept extends BaseConcept {
         sb.append(code.substring(0, 2));
         sb.append('.');
         sb.append(code.substring(2));    		
-        super.init(sb.toString(), props.getIcd9CmLocalName());
+        super.init(sb.toString(), null, props.getIcd9CmLocalName());
 	}
 	
     public String toString() {

@@ -16,8 +16,6 @@ public class ICDConceptFactory {
 			rv = new ICD9PCSConcept(code, props);
 		} else if(conType == ICDGEMConstants.CON_TYPE_ROOT) {
 			rv = new RootConcept(props);
-		} else if(conType == ICDGEMConstants.CON_TYPE_COMPLEX) {
-			rv = new ComplexConcept(code, props);
 		} else {
 			LgMessageDirectorIF md = props.getMessageDirector();
 			md.error("ICDConceptFactory: createConcpet: invalid concept type identifier: " + conType);

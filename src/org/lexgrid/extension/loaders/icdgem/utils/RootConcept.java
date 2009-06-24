@@ -3,7 +3,7 @@ package org.lexgrid.extension.loaders.icdgem.utils;
 public class RootConcept extends BaseConcept {
 	
 	public RootConcept(ICDGEMProperties props) {
-        super.init("@", props.getCsLocalName());
+        super.init("@", "top thing", props.getCsLocalName());
 	}
 	
     public String toString() {

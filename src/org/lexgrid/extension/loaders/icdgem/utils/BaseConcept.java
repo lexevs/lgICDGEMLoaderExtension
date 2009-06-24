@@ -20,11 +20,21 @@ package org.lexgrid.extension.loaders.icdgem.utils;
 
 public abstract class BaseConcept {
     private String _code;
+    private String _description;
     private String _sourceCodingScheme;
 
-    public void init(String code, String sourceCodingScheme) {
+    public void init(String code, String description, String sourceCodingScheme) {
     	_code = code;
     	_sourceCodingScheme = sourceCodingScheme;
+    	if(description == null) {
+    		_description = code;
+    	} else {
+    		_description = description;
+    	}
+    }
+    
+    public String getDescription() {
+    	return _description;
     }
     
     public String getCode() {

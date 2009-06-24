@@ -22,13 +22,13 @@ public class ICD10CMConcept extends BaseConcept {
 	
 	public ICD10CMConcept(String code, ICDGEMProperties props) {
 		if(code.length() == 3) {
-			super.init(code, props.getIcd10CmLocalName());
+			super.init(code, null, props.getIcd10CmLocalName());
 		} else {
 			StringBuffer sb = new StringBuffer(code.length() + 1);
 			sb.append(code.substring(0, 3));
 			sb.append('.');
 			sb.append(code.substring(3));
-			super.init(sb.toString(), props.getIcd10CmLocalName());
+			super.init(sb.toString(), null, props.getIcd10CmLocalName());
 		}
 	}
 	

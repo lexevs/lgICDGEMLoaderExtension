@@ -1,7 +1,6 @@
 package org.lexgrid.extension.loaders.icdgem.file;
 
 import java.util.ArrayList;
-import java.util.Stack;
 
 import org.lexgrid.extension.loaders.icdgem.utils.BaseConcept;
 import org.lexgrid.extension.loaders.icdgem.utils.ICDGEMConstants;

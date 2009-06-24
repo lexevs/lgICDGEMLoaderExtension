@@ -21,7 +21,7 @@ package org.lexgrid.extension.loaders.icdgem.utils;
 public class ICD10PCSConcept extends BaseConcept {
 	
 	public ICD10PCSConcept(String code, ICDGEMProperties props) {
-		super.init(code, props.getIcd10PcsLocalName());
+		super.init(code, null, props.getIcd10PcsLocalName());
 	}
 	
     public String toString() {
