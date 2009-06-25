@@ -90,7 +90,8 @@
 		
 		<zip destfile="${dist.dir}/deployICDGEM.zip">
 			<zipfileset dir="${basedir}/admin" includes="LoadICDGEM.bat" prefix="admin"/>
-			<zipfileset dir="${basedir}/admin" includes="LoadICDGEM.sh" prefix="admin"/>		
+			<zipfileset dir="${basedir}/admin" includes="LoadICDGEM.sh" prefix="admin"/>
+			<zipfileset dir="${basedir}" includes="lgICDGEMLoaderEx-readme.txt" />
 			<zipfileset dir="${dist.dir}" includes="lgICDGEMLoaderEx.jar" prefix="runtime"/>
 			<zipfileset dir="${dist.dir}" includes="lgICDGEMLoaderEx-src.jar" prefix="source"/>
 			<zipfileset dir="${dist.dir}" includes="lgICDGEMLoaderEx-test.jar" prefix="test"/>
