@@ -23,8 +23,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.TreeSet;
 
 import org.LexGrid.messaging.LgMessageDirectorIF;
 import org.LexGrid.util.sql.DBUtility;
