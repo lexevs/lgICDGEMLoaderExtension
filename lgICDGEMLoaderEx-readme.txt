@@ -97,9 +97,12 @@ CM files:
 ----------------------------------------------------------------------------------
 Known Issues and limitations.
 ----------------------------------------------------------------------------------
-1. As of this writing, there is a LexBIG bug that prevents the top level nodes (not the root node, but those 
-immediately below it) from resolving the concept description information.  In the case if the GEM loader, that
-mean the concept on the left side of a 'MapsTo' association will not have concept description information 
+1. If using the LexBIG GUI, it is not practical to resolve the entire coding scheme as a graph. 
+This is due to the number of entities immediately present beneath the root node. However, It is 
+possible to view a portion of the graph by indicating a focus code.
+ 
+2. If using the LexBIG GUI, there is an issue prevents the focus code from resolving its concept description. 
+In the case if the GEM loader, that mean the concept on the left side of a 'MapsTo' association will not have concept description information 
 even if that information should be available (by having the loaded ICD data), whereas the concept on the right
 side of the association will have the description info.  
    	  
