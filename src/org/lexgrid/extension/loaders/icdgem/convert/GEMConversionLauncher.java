@@ -18,7 +18,6 @@
  */
 package org.lexgrid.extension.loaders.icdgem.convert;
 
-import org.LexGrid.LexBIG.Preferences.loader.LoadPreferences.LoaderPreferences;
 import org.LexGrid.messaging.LgMessageDirectorIF;
 import org.lexgrid.extension.loaders.icdgem.convert.ICDGEMToLex;
 import org.lexgrid.extension.loaders.icdgem.inputFormat.ICDGEMText;
