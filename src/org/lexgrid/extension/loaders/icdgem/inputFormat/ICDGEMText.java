@@ -18,7 +18,6 @@
  */
 package org.lexgrid.extension.loaders.icdgem.inputFormat;
 
-import org.lexgrid.extension.loaders.icdgem.utils.ICDGEMConstants;
 import org.lexgrid.extension.loaders.icdgem.utils.ICDGEMProperties;
 
 import edu.mayo.informatics.lexgrid.convert.exceptions.ConnectionFailure;
