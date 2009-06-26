@@ -104,5 +104,5 @@ possible to view a portion of the graph by indicating a focus code.
 2. If using the LexBIG GUI, there is an issue prevents the focus code from resolving its concept description. 
 In the case if the GEM loader, that mean the concept on the left side of a 'MapsTo' association will not have concept description information 
 even if that information should be available (by having the loaded ICD data), whereas the concept on the right
-side of the association will have the description info.  
+side of the association will have the description info. NCI Gforge LexEVS bug 22036. 
    	  
