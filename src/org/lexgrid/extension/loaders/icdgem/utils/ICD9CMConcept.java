@@ -23,8 +23,10 @@ public class ICD9CMConcept extends BaseConcept {
 	public ICD9CMConcept(String code, ICDGEMProperties props) {
 		StringBuffer sb = new StringBuffer(code.length() + 1);    		
         sb.append(code.substring(0, 3));
-        sb.append('.');
-        sb.append(code.substring(3));    		
+        if(code.length() > 3) {
+            sb.append('.');
+            sb.append(code.substring(3));    		        	
+        }
 		super.init(sb.toString(), null, props.getIcd9CmLocalName());
 	}
 	
