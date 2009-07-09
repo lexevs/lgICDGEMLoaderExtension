@@ -30,6 +30,7 @@ import org.LexGrid.LexBIG.Utility.ConvenienceMethods;
 public class CleanUpTest extends TestCase {
    
 	private void removeLoad(String uri, String version) throws LBException {
+		ServiceHolder.configureForSingleConfig();
 		LexBIGServiceManager lbsm = ServiceHolder.instance().getLexBIGService().getServiceManager(null);
 		AbsoluteCodingSchemeVersionReference a = ConvenienceMethods.createAbsoluteCodingSchemeVersionReference(
 				uri, version);
