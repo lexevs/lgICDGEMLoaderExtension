@@ -54,4 +54,11 @@ public class ICDGEMConstants {
     public static final String ASSOCIATION_PART_OF = "partOf";
     public static final String ASSOCIATION_ISA = "Is_A";    
     public static final String NO_MAP = "NO MAP";
+    
+	public static final String PROPS_ICD9_TO_10_CM  = "icd9to10cm.properties";
+	public static final String PROPS_ICD9_TO_10_PCS = "icd9to10pcs.properties";
+	public static final String PROPS_ICD10_TO_9_CM  = "icd10to9cm.properties";
+	public static final String PROPS_ICD10_TO_9_PCS = "icd10to9pcs.properties";
+	public static final String PROPS_ICD_GEM_LOADER = "icdGemLoader.properties";
+    
 }

@@ -18,9 +18,12 @@
  */
 package org.lexgrid.extension.loaders.icdgem.utils;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Enumeration;
 import java.util.Properties;
 
 import org.LexGrid.LexBIG.DataModel.InterfaceElements.LoadStatus;
@@ -34,6 +37,11 @@ import org.LexGrid.messaging.LgMessageDirectorIF;
  */
 
 public class ICDGEMProperties {
+	
+	// LexGrid values
+	private String _lexGridVersion;
+	private boolean _lexVerPost50;
+	
     // loader values
     private String _loaderName;
     private String _loaderVersion;    
@@ -127,15 +135,15 @@ public class ICDGEMProperties {
     	_loaderProps = new java.util.Properties();
     	ICDGEMProperties util = new ICDGEMProperties();
         try {
-        	_loaderProps.load(util.getClass().getClassLoader().getResourceAsStream("icdGemLoader.properties"));
+        	_loaderProps.load(util.getClass().getClassLoader().getResourceAsStream(ICDGEMConstants.PROPS_ICD_GEM_LOADER));
         	if(this._icdGemType == ICDGEMConstants.ICD10_TO_9_CM) {
-        		_gemProps.load(util.getClass().getClassLoader().getResourceAsStream("icd10to9cm.properties"));
+        		_gemProps.load(util.getClass().getClassLoader().getResourceAsStream(ICDGEMConstants.PROPS_ICD10_TO_9_CM));
         	} else if (this._icdGemType == ICDGEMConstants.ICD10_TO_9_PCS) {
-        		_gemProps.load(util.getClass().getClassLoader().getResourceAsStream("icd10to9pcs.properties"));
+        		_gemProps.load(util.getClass().getClassLoader().getResourceAsStream(ICDGEMConstants.PROPS_ICD10_TO_9_PCS));
         	} else if (this._icdGemType == ICDGEMConstants.ICD9_TO_10_CM) {
-        		_gemProps.load(util.getClass().getClassLoader().getResourceAsStream("icd9to10cm.properties"));
+        		_gemProps.load(util.getClass().getClassLoader().getResourceAsStream(ICDGEMConstants.PROPS_ICD9_TO_10_CM));
         	} else if (this._icdGemType == ICDGEMConstants.ICD9_TO_10_PCS) {
-        		_gemProps.load(util.getClass().getClassLoader().getResourceAsStream("icd9to10pcs.properties"));
+        		_gemProps.load(util.getClass().getClassLoader().getResourceAsStream(ICDGEMConstants.PROPS_ICD9_TO_10_PCS));
         	} else {
     			_md.error("ICDGEMProperties: readProperties: unrecoginized icdGemType: '" + _icdGemType + "'.");			
     		}
@@ -167,7 +175,11 @@ public class ICDGEMProperties {
 	    _textualPresentationUri = _gemProps.getProperty("text.plain.uri");
 	    _textPlainName = _gemProps.getProperty("textual.presentation.name");
 	    _textPlainUri = _gemProps.getProperty("textual.presentation.uri");
-		
+	    
+	    // get LexGrid version
+	    _lexGridVersion = this.findLexGidVersion();
+		_md.info("ICD10Utilities: readProperties: _lexGridVersion: " + _lexGridVersion);
+		this.setLexGridPost50(_lexGridVersion);
     }
     
     public String getTextualPresentationName() {
@@ -280,5 +292,92 @@ public class ICDGEMProperties {
     public LgMessageDirectorIF getMessageDirector() {
     	return _md;
     }
+    
+    private void setLexGridPost50(String lexVer) {
+    	//-----------------------------
+    	// Expected possible versions:
+    	//   build.version=5.0.0
+    	//   build.version=5.1
+    	//-----------------------------
+    	StringBuffer num = new StringBuffer();
+    	num.append(lexVer.charAt(0));
+    	int majorVer = Integer.parseInt(num.toString());
+    	num = new StringBuffer();
+    	num.append(lexVer.charAt(2));
+    	int minorVer = Integer.parseInt(num.toString());
+    	if(majorVer == 5) {
+    		if(minorVer > 0) {
+    			_lexVerPost50 = true;
+    		} else {
+    			_lexVerPost50 = false;
+    		}
+    	} else {
+    		_md.error("ICD10Utilities: setLexGridPre51: unexpected majorVer: " + majorVer);
+    		_md.error("ICD10Utilities: setLexGridPre51: setting lexGridPre51 to false");
+    		_md.error("ICD10Utilities: setLexGridPre51: version string: " + lexVer);
+    	}
+    }
+    
+    public boolean lexGridPost50() {
+    	return _lexVerPost50;
+    }
+    
+    private String findLexGidVersion() {
+    	String rv = null;
+    	Properties props;
+		props = new Properties();
+		try {
+			// loading properties from the build.properties in the LexBXX
+			// install
+			props.load(new FileInputStream("../build.properties"));
+		} catch (FileNotFoundException e) {
+			// Running from webstart or eclipse so try the local directory
+			try {
+				props.load(new FileInputStream("build.properties"));
+			} catch (FileNotFoundException e1) {
+				// do nothing
+		        try {
+					props.load(this.getClass().getClassLoader().getResourceAsStream("build.properties"));
+				} catch (Exception ex) {
+					// do nothing
+				}
+			} catch (IOException e1) {
+				// do nothing
+			}
+		} catch (IOException e) {
+			// Do Nothing no properties to show
+		}
+		
+		if(props.isEmpty()) {
+			// last chance... check for system property, i.e.
+			//   -DlexEvsVer=5.2
+			String value = System.getProperty("lexEvsVer");
+			if(value == null || value.length() == 0) {
+				// tried our best to find the version but couldn't
+				// default to 5.1
+				_md.error("ICD10Utilities: setLexGridPre51: could not determine LexGrid version; assume LexGrid 5.1");
+				rv = new String("5.1");
+			} else {
+				rv = value;
+			}
+		} else {
+			rv = props.getProperty("build.version");
+		}
+		return rv;
+    }
+    
+	public static void dumpSystemProperties() {
+	    Properties props = System.getProperties();
+	    Enumeration<Object> keys = props.keys();
+	    String key;
+	    System.out.println("-------");
+	    while(keys.hasMoreElements()) {
+	    	key = (String)keys.nextElement();
+	    	String value = props.getProperty(key);
+	    	System.out.println(key.toString() + " --- " + value.toString());
+	    }
+	    System.out.println("-------");
+	}
+
     
 }
