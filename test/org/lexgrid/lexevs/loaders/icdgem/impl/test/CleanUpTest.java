@@ -25,11 +25,17 @@ import org.LexGrid.LexBIG.Exceptions.LBException;
 import org.LexGrid.LexBIG.Impl.testUtility.ServiceHolder;
 import org.LexGrid.LexBIG.LexBIGService.LexBIGServiceManager;
 import org.LexGrid.LexBIG.Utility.ConvenienceMethods;
+import org.lexgrid.lexevs.loaders.icdgem.impl.test.dataobjects.ICDGEMTestBasicDO;
 
 
 public class CleanUpTest extends TestCase {
+	
+	public CleanUpTest(String serverName) {
+		super(serverName);
+	}
    
 	private void removeLoad(String uri, String version) throws LBException {
+//		System.out.println("CleanUpTest: remove data: " + uri + "/" + version);
 		ServiceHolder.configureForSingleConfig();
 		LexBIGServiceManager lbsm = ServiceHolder.instance().getLexBIGService().getServiceManager(null);
 		AbsoluteCodingSchemeVersionReference a = ConvenienceMethods.createAbsoluteCodingSchemeVersionReference(
@@ -39,19 +45,23 @@ public class CleanUpTest extends TestCase {
 	}
 	
 	public void testRemoveLoadIcd9to10cm()throws LBException {
-		this.removeLoad("urn:oid:2.16.840.1.113883.6.100", "JUnit");
+		ICDGEMTestBasicDO helper = ICDGEMTestBasicDO.createObj(ICDGEMTestBasicDO.I9_10_CM);
+		this.removeLoad(helper.getCsUri(), helper.getCsVer());
 	}
 	
 	public void testRemoveLoadIcd9to10pcs()throws LBException {
-		this.removeLoad("urn:oid:2.16.840.1.113883.6.101", "JUnit");
+		ICDGEMTestBasicDO helper = ICDGEMTestBasicDO.createObj(ICDGEMTestBasicDO.I9_10_PCS);
+		this.removeLoad(helper.getCsUri(), helper.getCsVer());
 	}
 	
 	public void testRemoveLoadIcd10to9cm()throws LBException {
-		this.removeLoad("urn:oid:2.16.840.1.113883.6.102", "JUnit");
+		ICDGEMTestBasicDO helper = ICDGEMTestBasicDO.createObj(ICDGEMTestBasicDO.I10_9_CM);
+		this.removeLoad(helper.getCsUri(), helper.getCsVer());
 	}
 
 	public void testRemoveLoadIcd10to9pcs()throws LBException {
-		this.removeLoad("urn:oid:2.16.840.1.113883.6.103", "JUnit");
+		ICDGEMTestBasicDO helper = ICDGEMTestBasicDO.createObj(ICDGEMTestBasicDO.I10_9_PCS);
+		this.removeLoad(helper.getCsUri(), helper.getCsVer());
 	}
 	
 	
