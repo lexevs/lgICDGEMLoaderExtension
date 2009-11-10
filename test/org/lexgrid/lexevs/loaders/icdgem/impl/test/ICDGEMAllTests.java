@@ -31,6 +31,10 @@ public class ICDGEMAllTests {
 		
 		//$JUnit-BEGIN$
 		suite.addTestSuite(ICDGEMTest.class);
+		suite.addTestSuite(I9To10CmJdbcTests.class);
+		suite.addTestSuite(I10To9CmJdbcTests.class);
+		suite.addTestSuite(I9To10PcsJdbcTests.class);
+		suite.addTestSuite(I10To9PcsJdbcTests.class);
 		suite.addTestSuite(CleanUpTest.class);
 		//$JUnit-END$
 		return suite;
