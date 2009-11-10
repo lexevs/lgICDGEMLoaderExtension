@@ -23,12 +23,18 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.UUID;
 
+import org.LexGrid.managedobj.InsertException;
+import org.LexGrid.managedobj.ObjectAlreadyExistsException;
 import org.LexGrid.messaging.LgMessageDirectorIF;
 import org.LexGrid.util.sql.DBUtility;
+import org.LexGrid.util.sql.GenericSQLModifier;
 import org.LexGrid.util.sql.lgTables.SQLTableConstants;
 import org.LexGrid.util.sql.lgTables.SQLTableUtilities;
 
+import org.apache.commons.lang.StringUtils;
+import org.lexgrid.extension.loaders.icdgem.utils.LexEntryStateHelper;
 import org.lexgrid.extension.loaders.icdgem.file.FileProcessor;
 import org.lexgrid.extension.loaders.icdgem.utils.Association;
 import org.lexgrid.extension.loaders.icdgem.utils.BaseConcept;
@@ -51,6 +57,9 @@ public class ICDGEMToLex {
     private SQLTableUtilities _tableUtility;
     private SQLTableConstants _tableConstants;
     private CodingScheme _codingScheme;
+    private PreparedStatement _insertIntoEntryState;
+    private GenericSQLModifier _sqlModifier;
+    private boolean _lexGridPost50 = false;
 
     /**
      * @return the codingSchemeName
@@ -63,20 +72,19 @@ public class ICDGEMToLex {
             String sqlUsername, String sqlPassword, String tablePrefix, ICDGEMProperties props) throws Exception {
         _messages = props.getMessageDirector();
         _props = props;
-
+        _messages.info("ICDGEMToLex: Loader Version: " + _props.getLoaderVersion());        
+        _lexGridPost50 = props.lexGridPost50();
         _codingScheme = FileProcessor.process(fileLocation, props);
 
-        // set up the sql tables
         prepareDatabase(_codingScheme.getCsName(), sqlServer, sqlDriver, sqlUsername, sqlPassword,
                 tablePrefix);
-
-        _tableConstants = _tableUtility.getSQLTableConstants();
-
+        
         prepCodingScheme(_codingScheme);
         loadConcepts(_codingScheme);
         loadHasSubtypeRelations(_codingScheme);
         loadMapsToRelations(_codingScheme);
         loadContainsRelations(_codingScheme);
+        _insertIntoEntryState.close();
         _sqlConnection.close();
     }
 
@@ -85,6 +93,7 @@ public class ICDGEMToLex {
         try {
             _messages.info("ICDGEMToLex: prepareDatabase: Connecting to database");
             _sqlConnection = DBUtility.connectToDatabase(sqlServer, sqlDriver, sqlUsername, sqlPassword);
+            _sqlModifier = new GenericSQLModifier(_sqlConnection);
             // gsm_ = new GenericSQLModifier(_sqlConnection);
         } catch (ClassNotFoundException e) {
             _messages
@@ -92,6 +101,11 @@ public class ICDGEMToLex {
         }
 
         _tableUtility = new SQLTableUtilities(_sqlConnection, tablePrefix);
+        _tableConstants = _tableUtility.getSQLTableConstants();
+        _insertIntoEntryState = _sqlConnection.prepareStatement(_tableConstants
+                .getInsertStatementSQL(SQLTableConstants.ENTRY_STATE));                        
+        
+        
 
         _messages.info("ICDGEMToLex: prepareDatabase: Creating tables");
         _tableUtility.createDefaultTables();
@@ -122,7 +136,19 @@ public class ICDGEMToLex {
         entityDescription, 
         copyright
         */
-
+        LexEntryStateHelper codingSchemeLesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_CODINGSCHEME);
+        addEntryState(codingSchemeLesh.getEntryStateId(), 
+        		codingSchemeLesh.getEntryType(), 
+        		codingSchemeLesh.getOwner(), 
+        		SQLTableConstants.TBLCOL_ISACTIVE, 
+        		codingSchemeLesh.getEffectiveDate().toString(),
+        		codingSchemeLesh.getExpirationDate().toString(),
+        		codingSchemeLesh.getRevisionId(), 
+        		codingSchemeLesh.getPrevisionId(),
+        		codingSchemeLesh.getChangeType(),
+        		codingSchemeLesh.getRelativeOrder()
+        		);        
+        
         insert.setString(ii++, codingScheme.getCsName()); // codingSchemeName
         insert.setString(ii++, codingScheme.getCsUri()); // codingSchemeURI
         insert.setString(ii++, codingScheme.getRepresentsVersion()); // representsVersion
@@ -130,7 +156,7 @@ public class ICDGEMToLex {
         insert.setString(ii++, codingScheme.getDefaultLanguage()); // defaultLanguage
         insert.setInt(ii++, codingScheme.getConcepts().size()); // approxNumConcepts
         DBUtility.setBooleanOnPreparedStatment(insert, ii++, new Boolean(false)); // isActive
-        insert.setInt(ii++, 0); // entryStateId
+        insert.setInt(ii++, codingSchemeLesh.getEntryStateId()); // entryStateId
         insert.setString(ii++, SQLTableConstants.TBLCOLVAL_MISSING); // releaseURI
         insert.setString(ii++, codingScheme.getEntityDescription()); // entityDescription
         insert.setString(ii++, codingScheme.getCopyright()); // entityDescription
@@ -405,6 +431,18 @@ public class ICDGEMToLex {
             entityDescription
             */
             int k = 1;
+			LexEntryStateHelper isaLesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ASSOCIATION);
+		    addEntryState(isaLesh.getEntryStateId(), 
+		    		isaLesh.getEntryType(), 
+		    		isaLesh.getOwner(), 
+		      		SQLTableConstants.TBLCOL_ISACTIVE, 
+		      		isaLesh.getEffectiveDate().toString(),
+		      		isaLesh.getExpirationDate().toString(),
+		      		isaLesh.getRevisionId(), 
+		      		isaLesh.getPrevisionId(),
+		      		isaLesh.getChangeType(),
+		      		isaLesh.getRelativeOrder()
+		      		);            
             
             // hasSubType/Isa
             insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
@@ -424,10 +462,26 @@ public class ICDGEMToLex {
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isAntiReflexive
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isFunctional
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isReverseFunctional
+            if(this._lexGridPost50 == true) {
+    			insert.setInt(k++, isaLesh.getEntryStateId()); // entryStateId
+            }            
             insert.setString(k++, "The parent child relationships."); // entityDescription
             insert.executeUpdate();
             
             // mapsTo
+			LexEntryStateHelper mapsToLesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ASSOCIATION);
+		    addEntryState(mapsToLesh.getEntryStateId(), 
+		    		mapsToLesh.getEntryType(), 
+		    		mapsToLesh.getOwner(), 
+		      		SQLTableConstants.TBLCOL_ISACTIVE, 
+		      		mapsToLesh.getEffectiveDate().toString(),
+		      		mapsToLesh.getExpirationDate().toString(),
+		      		mapsToLesh.getRevisionId(), 
+		      		mapsToLesh.getPrevisionId(),
+		      		mapsToLesh.getChangeType(),
+		      		mapsToLesh.getRelativeOrder()
+		      		);            
+            
             k = 1;
             insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
@@ -446,11 +500,26 @@ public class ICDGEMToLex {
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isAntiReflexive
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isFunctional
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isReverseFunctional
+            if(this._lexGridPost50 == true) {
+    			insert.setInt(k++, mapsToLesh.getEntryStateId()); // entryStateId
+            }                        
             insert.setString(k++, "Mapping relationship."); // entityDescription
             insert.executeUpdate();
 
             // contains
             k = 1;
+			LexEntryStateHelper containsLesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ASSOCIATION);
+		    addEntryState(containsLesh.getEntryStateId(), 
+		    		containsLesh.getEntryType(), 
+		    		containsLesh.getOwner(), 
+		      		SQLTableConstants.TBLCOL_ISACTIVE, 
+		      		containsLesh.getEffectiveDate().toString(),
+		      		containsLesh.getExpirationDate().toString(),
+		      		containsLesh.getRevisionId(), 
+		      		containsLesh.getPrevisionId(),
+		      		containsLesh.getChangeType(),
+		      		containsLesh.getRelativeOrder()
+		      		);                        
             insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
             insert.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
@@ -468,6 +537,9 @@ public class ICDGEMToLex {
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isAntiReflexive
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isFunctional
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isReverseFunctional
+            if(this._lexGridPost50 == true) {
+    			insert.setInt(k++, containsLesh.getEntryStateId()); // entryStateId
+            }                                    
             insert.setString(k++, "Relationship between compound concepts and their parts."); // entityDescription
             insert.executeUpdate();
             
@@ -501,6 +573,18 @@ public class ICDGEMToLex {
             entityDescription
             */
             int k = 1;
+			LexEntryStateHelper hasSubTypeLesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ASSOCIATION);
+		    addEntryState(hasSubTypeLesh.getEntryStateId(), 
+		    		hasSubTypeLesh.getEntryType(), 
+		    		hasSubTypeLesh.getOwner(), 
+		      		SQLTableConstants.TBLCOL_ISACTIVE, 
+		      		hasSubTypeLesh.getEffectiveDate().toString(),
+		      		hasSubTypeLesh.getExpirationDate().toString(),
+		      		hasSubTypeLesh.getRevisionId(), 
+		      		hasSubTypeLesh.getPrevisionId(),
+		      		hasSubTypeLesh.getChangeType(),
+		      		hasSubTypeLesh.getRelativeOrder()
+		      		);                                    
             insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
             insert.setString(k++, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
             insert.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
@@ -518,6 +602,9 @@ public class ICDGEMToLex {
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isAntiReflexive
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isFunctional
             DBUtility.setBooleanOnPreparedStatment(insert, k++, null, false); // isReverseFunctional
+            if(this._lexGridPost50 == true) {
+    			insert.setInt(k++, hasSubTypeLesh.getEntryStateId()); // entryStateId
+            }                                                
             insert.setString(k++, "The parent child relationships."); // entityDescription
             
             insert.executeUpdate();
@@ -561,6 +648,19 @@ public class ICDGEMToLex {
                 ResultSet results = checkForCode.executeQuery();
                 // only one result
                 results.next();
+                LexEntryStateHelper conceptLesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ENTITY);
+                addEntryState(conceptLesh.getEntryStateId(), 
+                  		conceptLesh.getEntryType(), 
+                  		conceptLesh.getOwner(), 
+                  		SQLTableConstants.TBLCOL_ISACTIVE, 
+                  		conceptLesh.getEffectiveDate().toString(),
+                  		conceptLesh.getExpirationDate().toString(),
+                  		conceptLesh.getRevisionId(), 
+                  		conceptLesh.getPrevisionId(),
+                  		conceptLesh.getChangeType(),
+                  		conceptLesh.getRelativeOrder()
+                  		);
+                
                 if (results.getInt("found") == 0) {
                     if (concept.getCode() == null || concept.getCode().length() == 0) {
                         _messages.fatalAndThrowException("ICDGEMToLex: loadConcepts: FATAL ERROR - The concept '" + concept.getCode()
@@ -585,7 +685,7 @@ public class ICDGEMToLex {
                     DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isDefined
                     DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("false"), false); // isAnonymous
                     DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isActive
-                    insert.setLong(k++, i); // entryStateId
+                    insert.setLong(k++, conceptLesh.getEntryStateId()); // entryStateId
                     insert.setString(k++, concept.getDescription()); // entityDescription
                     insert.executeUpdate();
                     
@@ -621,6 +721,18 @@ public class ICDGEMToLex {
                     entryStateId, 
                     propertyValue
                     */
+        			LexEntryStateHelper propLesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ENTITYPROPERTY);
+        		    addEntryState(propLesh.getEntryStateId(), 
+        		    		propLesh.getEntryType(), 
+        		    		propLesh.getOwner(), 
+        		      		SQLTableConstants.TBLCOL_ISACTIVE, 
+        		      		propLesh.getEffectiveDate().toString(),
+        		      		propLesh.getExpirationDate().toString(),
+        		      		propLesh.getRevisionId(), 
+        		      		propLesh.getPrevisionId(),
+        		      		propLesh.getChangeType(),
+        		      		propLesh.getRelativeOrder()
+        		      		);                                    
 
                     k = 1;
                     insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // codingSchemeName
@@ -636,7 +748,7 @@ public class ICDGEMToLex {
                     DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("false"), false); // matchIfNoContext
                     insertIntoConceptProperty.setString(k++, ""); // representationalForm
                     DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isActive
-                    insertIntoConceptProperty.setLong(k++, i);  // entryStateId
+                    insertIntoConceptProperty.setLong(k++, propLesh.getEntryStateId());  // entryStateId
                     insertIntoConceptProperty.setString(k++, concept.getDescription()); // propertyValue
                     insertIntoConceptProperty.executeUpdate();
                 }
@@ -674,6 +786,19 @@ public class ICDGEMToLex {
                         */
 
                         int k = 1;
+            			LexEntryStateHelper prop2Lesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ENTITYPROPERTY);
+            		    addEntryState(prop2Lesh.getEntryStateId(), 
+            		    		prop2Lesh.getEntryType(), 
+            		    		prop2Lesh.getOwner(), 
+            		      		SQLTableConstants.TBLCOL_ISACTIVE, 
+            		      		prop2Lesh.getEffectiveDate().toString(),
+            		      		prop2Lesh.getExpirationDate().toString(),
+            		      		prop2Lesh.getRevisionId(), 
+            		      		prop2Lesh.getPrevisionId(),
+            		      		prop2Lesh.getChangeType(),
+            		      		prop2Lesh.getRelativeOrder()
+            		      		);                                    
+                        
                         insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // codingSchemeName
                         insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
                         insertIntoConceptProperty.setString(k++, concept.getCode()); // entityCode
@@ -687,7 +812,7 @@ public class ICDGEMToLex {
                         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, null, false); // matchIfNoContext
                         insertIntoConceptProperty.setString(k++, ""); // representationalForm
                         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isActive
-                        insertIntoConceptProperty.setLong(k++, i); // entryStateId
+                        insertIntoConceptProperty.setLong(k++, prop2Lesh.getEntryStateId()); // entryStateId
                         insertIntoConceptProperty.setString(k++, concept.getDescription()); // propertyValue
                         insertIntoConceptProperty.executeUpdate();
                     }
@@ -713,6 +838,19 @@ public class ICDGEMToLex {
         entityDescription
         */
         RootConcept specialConcept = new RootConcept(_props);
+        
+        LexEntryStateHelper specialConceptLesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ENTITY);
+        addEntryState(specialConceptLesh.getEntryStateId(), 
+        		specialConceptLesh.getEntryType(), 
+        		specialConceptLesh.getOwner(), 
+          		SQLTableConstants.TBLCOL_ISACTIVE, 
+          		specialConceptLesh.getEffectiveDate().toString(),
+          		specialConceptLesh.getExpirationDate().toString(),
+          		specialConceptLesh.getRevisionId(), 
+          		specialConceptLesh.getPrevisionId(),
+          		specialConceptLesh.getChangeType(),
+          		specialConceptLesh.getRelativeOrder()
+          		);
 
         int k = 1;
         insert.setString(k++, codingScheme.getCsName()); // codingSchemeName
@@ -721,7 +859,7 @@ public class ICDGEMToLex {
         DBUtility.setBooleanOnPreparedStatment(insert, k++, null); // isDefined
         DBUtility.setBooleanOnPreparedStatment(insert, k++, null); // isAnonymous
         DBUtility.setBooleanOnPreparedStatment(insert, k++, new Boolean("true"), false); // isActive
-        insert.setLong(k++, 0); // entryStateId
+        insert.setLong(k++, specialConceptLesh.getEntryStateId()); // entryStateId
         insert.setString(k++, specialConcept.getDescription()); // entityDescription
         insert.executeUpdate();
         
@@ -742,6 +880,18 @@ public class ICDGEMToLex {
         entryStateId, 
         propertyValue
         */
+		LexEntryStateHelper prop3Lesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ENTITYPROPERTY);
+	    addEntryState(prop3Lesh.getEntryStateId(), 
+	    		prop3Lesh.getEntryType(), 
+	    		prop3Lesh.getOwner(), 
+	      		SQLTableConstants.TBLCOL_ISACTIVE, 
+	      		prop3Lesh.getEffectiveDate().toString(),
+	      		prop3Lesh.getExpirationDate().toString(),
+	      		prop3Lesh.getRevisionId(), 
+	      		prop3Lesh.getPrevisionId(),
+	      		prop3Lesh.getChangeType(),
+	      		prop3Lesh.getRelativeOrder()
+	      		);                                            
         k = 1;
         insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // codingSchemeName
         insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
@@ -756,7 +906,7 @@ public class ICDGEMToLex {
         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, null, false); // matchIfNoContext
         insertIntoConceptProperty.setString(k++, ""); // representationalForm
         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isActive
-        insertIntoConceptProperty.setLong(k++, 0); // entryStateId
+        insertIntoConceptProperty.setLong(k++, prop3Lesh.getEntryStateId()); // entryStateId
         insertIntoConceptProperty.setString(k++, specialConcept.getDescription()); // propertyValue
 
         insertIntoConceptProperty.executeUpdate();
@@ -790,6 +940,18 @@ public class ICDGEMToLex {
         entryStateId, 
         propertyValue
         */
+		LexEntryStateHelper prop4Lesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ENTITYPROPERTY);
+	    addEntryState(prop4Lesh.getEntryStateId(), 
+	    		prop4Lesh.getEntryType(), 
+	    		prop4Lesh.getOwner(), 
+	      		SQLTableConstants.TBLCOL_ISACTIVE, 
+	      		prop4Lesh.getEffectiveDate().toString(),
+	      		prop4Lesh.getExpirationDate().toString(),
+	      		prop4Lesh.getRevisionId(), 
+	      		prop4Lesh.getPrevisionId(),
+	      		prop4Lesh.getChangeType(),
+	      		prop4Lesh.getRelativeOrder()
+	      		);                                                    
         k = 1;
         insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // codingSchemeName
         insertIntoConceptProperty.setString(k++, codingScheme.getCsName()); // entityCodeNamespace
@@ -804,7 +966,7 @@ public class ICDGEMToLex {
         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("false"), false); // matchIfNoContext
         insertIntoConceptProperty.setString(k++, ""); // representationalForm
         DBUtility.setBooleanOnPreparedStatment(insertIntoConceptProperty, k++, new Boolean("true"), false); // isActive
-        insertIntoConceptProperty.setLong(k++, 0); // entryStateId        
+        insertIntoConceptProperty.setLong(k++, prop4Lesh.getEntryStateId()); // entryStateId        
         insertIntoConceptProperty.setString(k++, specialConcept.getDescription()); // propertyValue
         
         insertIntoConceptProperty.executeUpdate();
@@ -864,6 +1026,19 @@ public class ICDGEMToLex {
                 isActive, 
                 entryStateId
                 */
+        		LexEntryStateHelper conAssocLesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ENTITYASSNSTOENTITY);
+        	    addEntryState(conAssocLesh.getEntryStateId(), 
+        	    		conAssocLesh.getEntryType(), 
+        	    		conAssocLesh.getOwner(), 
+        	      		SQLTableConstants.TBLCOL_ISACTIVE, 
+        	      		conAssocLesh.getEffectiveDate().toString(),
+        	      		conAssocLesh.getExpirationDate().toString(),
+        	      		conAssocLesh.getRevisionId(), 
+        	      		conAssocLesh.getPrevisionId(),
+        	      		conAssocLesh.getChangeType(),
+        	      		conAssocLesh.getRelativeOrder()
+        	      		);                                                    
+                
                 insertIntoConceptAssociations.setString(1, codingScheme.getCsName()); // codingSchemeName
                 insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
                 insertIntoConceptAssociations.setString(3, codingScheme.getCsName()); // entityCodeNamespace
@@ -872,12 +1047,18 @@ public class ICDGEMToLex {
                 insertIntoConceptAssociations.setString(6, asso.getSourceCode()); // sourceEntityCode
                 insertIntoConceptAssociations.setString(7, asso.getTargetCodingScheme()); // targetEntityCodeNamespace
                 insertIntoConceptAssociations.setString(8, asso.getTargetCode()); // targetEntityCode
-                insertIntoConceptAssociations.setString(9, null); // multiAttributesKey
+                if(this._lexGridPost50 == true){
+                    //always populate the multiattributeskey -- in this case a random UUID
+                	insertIntoConceptAssociations.setString(9, UUID.randomUUID().toString());             
+                	
+                } else {
+                    insertIntoConceptAssociations.setString(9, null); // multiAttributesKey                	
+                }
                 insertIntoConceptAssociations.setString(10, null); // associationInstanceId 
                 DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 11, false, false); // isDefining
                 DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 12, false, false); // isInferred
                 DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 13, true, false); // isActive
-                insertIntoConceptAssociations.setLong(14, i); // entryStateId                
+                insertIntoConceptAssociations.setLong(14, conAssocLesh.getEntryStateId()); // entryStateId                
                 
                 insertIntoConceptAssociations.executeUpdate();
                 if (i % 10 == 0) {
@@ -943,6 +1124,19 @@ public class ICDGEMToLex {
                 isActive, 
                 entryStateId
                 */
+        		LexEntryStateHelper conAssocLesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ENTITYASSNSTOENTITY);
+        	    addEntryState(conAssocLesh.getEntryStateId(), 
+        	    		conAssocLesh.getEntryType(), 
+        	    		conAssocLesh.getOwner(), 
+        	      		SQLTableConstants.TBLCOL_ISACTIVE, 
+        	      		conAssocLesh.getEffectiveDate().toString(),
+        	      		conAssocLesh.getExpirationDate().toString(),
+        	      		conAssocLesh.getRevisionId(), 
+        	      		conAssocLesh.getPrevisionId(),
+        	      		conAssocLesh.getChangeType(),
+        	      		conAssocLesh.getRelativeOrder()
+        	      		);                                                    
+                
                 insertIntoConceptAssociations.setString(1, codingScheme.getCsName()); // codingSchemeName
                 insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
                 insertIntoConceptAssociations.setString(3, codingScheme.getCsName()); // entityCodeNamespace
@@ -951,12 +1145,18 @@ public class ICDGEMToLex {
                 insertIntoConceptAssociations.setString(6, asso.getSourceCode()); // sourceEntityCode
                 insertIntoConceptAssociations.setString(7, asso.getTargetCodingScheme()); // targetEntityCodeNamespace
                 insertIntoConceptAssociations.setString(8, asso.getTargetCode()); // targetEntityCode
-                insertIntoConceptAssociations.setString(9, null); // multiAttributesKey
+                if(this._lexGridPost50 == true){
+                    //always populate the multiattributeskey -- in this case a random UUID
+                	insertIntoConceptAssociations.setString(9, UUID.randomUUID().toString());             
+                	
+                } else {
+                    insertIntoConceptAssociations.setString(9, null); // multiAttributesKey                	
+                }
                 insertIntoConceptAssociations.setString(10, null); // associationInstanceId 
                 DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 11, false, false); // isDefining
                 DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 12, false, false); // isInferred
                 DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 13, true, false); // isActive
-                insertIntoConceptAssociations.setLong(14, i); // entryStateId                
+                insertIntoConceptAssociations.setLong(14, conAssocLesh.getEntryStateId()); // entryStateId                
                 
                 insertIntoConceptAssociations.executeUpdate();
                 if (i % 10 == 0) {
@@ -1021,6 +1221,19 @@ public class ICDGEMToLex {
                 isActive, 
                 entryStateId
                 */
+        		LexEntryStateHelper conAssocLesh = new LexEntryStateHelper(SQLTableConstants.ENTRY_STATE_TYPE_ENTITYASSNSTOENTITY);
+        	    addEntryState(conAssocLesh.getEntryStateId(), 
+        	    		conAssocLesh.getEntryType(), 
+        	    		conAssocLesh.getOwner(), 
+        	      		SQLTableConstants.TBLCOL_ISACTIVE, 
+        	      		conAssocLesh.getEffectiveDate().toString(),
+        	      		conAssocLesh.getExpirationDate().toString(),
+        	      		conAssocLesh.getRevisionId(), 
+        	      		conAssocLesh.getPrevisionId(),
+        	      		conAssocLesh.getChangeType(),
+        	      		conAssocLesh.getRelativeOrder()
+        	      		);                                                    
+                
                 insertIntoConceptAssociations.setString(1, codingScheme.getCsName()); // codingSchemeName
                 insertIntoConceptAssociations.setString(2, SQLTableConstants.TBLCOLVAL_DC_RELATIONS); // containerName
                 insertIntoConceptAssociations.setString(3, codingScheme.getCsName()); // entityCodeNamespace
@@ -1029,12 +1242,18 @@ public class ICDGEMToLex {
                 insertIntoConceptAssociations.setString(6, asso.getSourceCode()); // sourceEntityCode
                 insertIntoConceptAssociations.setString(7, asso.getTargetCodingScheme()); // targetEntityCodeNamespace
                 insertIntoConceptAssociations.setString(8, asso.getTargetCode()); // targetEntityCode
-                insertIntoConceptAssociations.setString(9, null); // multiAttributesKey
+                if(this._lexGridPost50 == true){
+                    //always populate the multiattributeskey -- in this case a random UUID
+                	insertIntoConceptAssociations.setString(9, UUID.randomUUID().toString());             
+                	
+                } else {
+                    insertIntoConceptAssociations.setString(9, null); // multiAttributesKey                	
+                }
                 insertIntoConceptAssociations.setString(10, null); // associationInstanceId 
                 DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 11, false, false); // isDefining
                 DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 12, false, false); // isInferred
                 DBUtility.setBooleanOnPreparedStatment(insertIntoConceptAssociations, 13, true, false); // isActive
-                insertIntoConceptAssociations.setLong(14, i); // entryStateId                
+                insertIntoConceptAssociations.setLong(14, conAssocLesh.getEntryStateId()); // entryStateId                
                 
                 insertIntoConceptAssociations.executeUpdate();
                 if (i % 10 == 0) {
@@ -1050,4 +1269,36 @@ public class ICDGEMToLex {
         checkForAssociation.close();
 
     }
+    
+    protected void addEntryState(int entryStateId, String entryType, String owner, String status, String effectiveDate,
+            String expirationDate, String revisionId, String prevRevisionId, String changeType, int relativeOrder)
+            throws InsertException, ObjectAlreadyExistsException, SQLException {
+        // Insert only if there is any data.
+        if (!StringUtils.isBlank(owner) || !StringUtils.isBlank(status) 
+                || effectiveDate != null || expirationDate != null
+                || !StringUtils.isBlank(revisionId) || !StringUtils.isBlank(prevRevisionId)
+                || !StringUtils.isBlank(changeType))
+        {
+            int k = 1;
+            _insertIntoEntryState.setInt(k++, entryStateId);
+            _insertIntoEntryState.setString(k++, entryType);
+            _insertIntoEntryState.setString(k++, owner);
+            _insertIntoEntryState.setString(k++, status);
+            _insertIntoEntryState.setTimestamp(k++, null);
+            _insertIntoEntryState.setTimestamp(k++, null);
+            _insertIntoEntryState.setString(k++, revisionId);
+            _insertIntoEntryState.setString(k++, prevRevisionId);
+            _insertIntoEntryState.setString(k++, (changeType != null ? changeType : " "));
+            _insertIntoEntryState.setInt(k++, relativeOrder);
+            
+            if(_sqlModifier.getDatabaseType().equals("ACCESS")){
+            	_insertIntoEntryState.setString(k++, null);
+            } else {
+            	_insertIntoEntryState.setObject(k++, null, java.sql.Types.BIGINT);
+            }
+            
+            _insertIntoEntryState.execute();            
+        }
+    }
+
 }

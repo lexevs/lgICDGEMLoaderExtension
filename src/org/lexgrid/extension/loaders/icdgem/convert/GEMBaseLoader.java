@@ -234,6 +234,7 @@ public class GEMBaseLoader {
             URNVersionPair[] locks = null;
             URNVersionPair[] loadedCodingSchemes = null;
             try {
+            	
                 // Construct the loaders in order to check the versions.
                 CodingScheme codingScheme = GEMConversionLauncher.startConversion(inputFormatInterface, lexGridSqlOut, null, optionHolder,
                         messageDirector, _props);
