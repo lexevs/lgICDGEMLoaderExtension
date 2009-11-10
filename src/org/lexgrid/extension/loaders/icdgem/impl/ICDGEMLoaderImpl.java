@@ -28,6 +28,7 @@ import org.lexgrid.extension.loaders.icdgem.convert.GEMBaseLoader;
 import org.lexgrid.extension.loaders.icdgem.inputFormat.ICDGEMText;
 import org.lexgrid.extension.loaders.icdgem.interfaces.ICDGEMLoader;
 import org.lexgrid.extension.loaders.icdgem.utils.ICDGEMProperties;
+import org.lexgrid.extension.loaders.icdgem.utils.NumGen;
 
 import edu.mayo.informatics.lexgrid.convert.exceptions.ConnectionFailure;
 import edu.mayo.informatics.lexgrid.convert.formats.Option;
@@ -52,6 +53,7 @@ public class ICDGEMLoaderImpl extends GEMBaseLoader implements ICDGEMLoader {
     
     
     public ICDGEMLoaderImpl(ICDGEMProperties props) {
+    	NumGen.resetCounters();
     	_props = props;
     	messagesDirector = super.getLogger();
     	
