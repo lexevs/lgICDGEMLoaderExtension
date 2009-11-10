@@ -20,7 +20,7 @@ package org.lexgrid.extension.loaders.icdgem.utils;
 
 public class ComplexConcept extends BaseConcept {
 	
- 	private static long _id = -1; 
+// 	private static long _id = -1; 
 	
 	public ComplexConcept(String code, ICDGEMProperties props) {
         String generatedId = generateComplexConceptId();
@@ -42,8 +42,9 @@ public class ComplexConcept extends BaseConcept {
 //    	String uuid = UUID.nameUUIDFromBytes(ar).toString();
 
     	StringBuffer buf = new StringBuffer("combination");
-    	++_id;
-    	buf.append(_id);
+//    	++_id;
+//    	buf.append(_id);
+    	buf.append(NumGen.getNextComplexConceptId());
     	return buf.toString();
     }
 }
