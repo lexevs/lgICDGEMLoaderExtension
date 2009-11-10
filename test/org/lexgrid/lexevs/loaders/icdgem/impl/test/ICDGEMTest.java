@@ -22,6 +22,7 @@ import junit.framework.TestCase;
 
 import org.lexgrid.extension.loaders.icdgem.admin.LoadICDGEM;
 import org.lexgrid.extension.loaders.icdgem.impl.ICDGEMLoaderImpl;
+import org.lexgrid.lexevs.loaders.icdgem.impl.test.utils.ICDGEMTestConstants;
 
 import org.LexGrid.LexBIG.DataModel.InterfaceElements.types.ProcessState;
 
@@ -50,26 +51,22 @@ public class ICDGEMTest extends TestCase {
 
     public void testLoadICD10To9Cm() throws Exception {
     	String[] args = {"-in", "resources/testData/icdgem/small_2009_I10gem.txt",
-    			"-type", "i10to9cm", "-ver", "JUnit", "-t", "JUnitTest" };
+    			"-type", "i10to9cm", "-ver", ICDGEMTestConstants.JUNIT, "-t", "JUnitTest" };
     	this.runIt(args);    }
 
     public void testLoadICD9To10Cm() throws Exception {
     	String[] args = {"-in", "resources/testData/icdgem/small_2009_I9gem.txt",
-    			"-type", "i9to10cm", "-ver", "JUnit", "-t", "JUnitTest" };
+    			"-type", "i9to10cm", "-ver", ICDGEMTestConstants.JUNIT, "-t", "JUnitTest" };
     	this.runIt(args);    }
         	
     public void testLoadICD9To10Pcs() throws Exception {
     	String[] args = {"-in", "resources/testData/icdgem/small_gem_i9pcs.txt",
-    			"-type", "i9to10pcs", "-ver", "JUnit", "-t", "JUnitTest" };
+    			"-type", "i9to10pcs", "-ver", ICDGEMTestConstants.JUNIT, "-t", "JUnitTest" };
     	this.runIt(args);    }
     	
     public void testLoadICD10To9Pcs() throws Exception {
     	String[] args = {"-in", "resources/testData/icdgem/small_gem_pcsi9.txt",
-    			"-type", "i10to9pcs", "-ver", "JUnit", "-t", "JUnitTest" };
+    			"-type", "i10to9pcs", "-ver", ICDGEMTestConstants.JUNIT, "-t", "JUnitTest" };
     	this.runIt(args);    }
     
-//    public void testLoadICD9To10Cm_super_small() throws Exception {
-//    	String[] args = {"-in", "resources/testData/icdgem/super_small_2009_I9gem.txt",
-//    			"-type", "i9to10cm", "-ver", "JUnit2", "-t", "JUnitTest2" };
-//    	this.runIt(args);    }    
 }
